@@ -1,0 +1,4 @@
+*.out
+objs/
+sockets/
+.wakatime-project
