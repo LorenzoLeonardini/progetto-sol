@@ -19,11 +19,15 @@ GREEN = \033[0;32m
 NC = \033[0m
 
 # List all the files needed for each target
-_SUPER_OBJS = supermercato/main.o
+_SUPER_OBJS = supermercato/main.o supermercato/logger.o
 _DIREC_OBJS = direttore/main.o
 # Generate final list with object dir
 DIREC_OBJS = $(patsubst %,$(ODIR)/%,$(_DIREC_OBJS))
 SUPER_OBJS = $(patsubst %,$(ODIR)/%,$(_SUPER_OBJS))
+
+# List all the header files
+SUPER_HEADERS = src/supermercato/logger.h
+DIREC_HEADERS =
 
 .PHONY: all clean
 
@@ -42,12 +46,12 @@ clean:
 # supermercato and direttore targets
 supermercato: $(SUPER_OBJS)
 	@$(ECHO) "$(GREEN)Generating executable $@.out$(NC)"
-	@$(CC) $(CFLAGS) $(SUPER_OBJS) -o $@.out
+	@$(CC) $(CFLAGS) $(SUPER_OBJS) $(SUPER_HEADERS) -o $@.out
 	@$(ECHO) "$(GREEN)\033[1mTarget $@ built$(NC)"
 
 direttore: $(DIREC_OBJS)
 	@$(ECHO) "$(GREEN)Generating executable $@.out$(NC)"
-	@$(CC) $(CFLAGS) $(DIREC_OBJS) -o $@.out
+	@$(CC) $(CFLAGS) $(DIREC_OBJS) $(DIREC_HEADERS) -o $@.out
 	@$(ECHO) "$(GREEN)\033[1mTarget $@ built$(NC)"
 
 # Object files for each source needed
