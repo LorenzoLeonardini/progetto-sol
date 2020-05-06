@@ -19,55 +19,62 @@ GREEN = \033[0;32m
 NC = \033[0m
 
 # List all the files needed for each target
-_SUPER_OBJS = supermercato/main.o supermercato/logger.o
-_DIREC_OBJS = direttore/main.o
+_OBJS = main.o logger.o manager.o supermarket.o
+_LLDS_OBJS = llds/queue.o
 # Generate final list with object dir
-DIREC_OBJS = $(patsubst %,$(ODIR)/%,$(_DIREC_OBJS))
-SUPER_OBJS = $(patsubst %,$(ODIR)/%,$(_SUPER_OBJS))
+OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
+LLDS_OBJS = $(patsubst %,$(ODIR)/%,$(_LLDS_OBJS))
 
 # List all the header files
-SUPER_HEADERS = src/supermercato/logger.h
-DIREC_HEADERS =
+HEADERS = src/logger.h src/consts.h src/manager.h src/supermarket.h
+LLDS_HEADERS = src/llds/queue.h
 
 .PHONY: all clean
 
-all: direttore supermercato
-	@[ -d $(SDIR) ] || mkdir -p $(SDIR) ]
+all: llds supermercato lldstest
 
 # Delete intermediate files and others
 clean:
 	@echo "Deleting objs folder"
-	@rm -rf objs
+	@rm -rf $(ODIR)
 	@echo "Deleting output files"
-	@rm *.out
+	@rm -rf *.out
 	@echo "Deleting socket files"
-	@rm -rf sockets
+	@rm -rf $(SDIR)
+	@echo "Deleting libraries files"
+	@rm -rf *.a
 
-# supermercato and direttore targets
-supermercato: $(SUPER_OBJS)
+# supermercato target
+supermercato: $(OBJS)
 	@$(ECHO) "$(GREEN)Generating executable $@.out$(NC)"
-	@$(CC) $(CFLAGS) $(SUPER_OBJS) $(SUPER_HEADERS) -o $@.out
-	@$(ECHO) "$(GREEN)\033[1mTarget $@ built$(NC)"
-
-direttore: $(DIREC_OBJS)
-	@$(ECHO) "$(GREEN)Generating executable $@.out$(NC)"
-	@$(CC) $(CFLAGS) $(DIREC_OBJS) $(DIREC_HEADERS) -o $@.out
+	@$(CC) $(CFLAGS) $(OBJS) -o $@.out -g -L . -lllds
 	@$(ECHO) "$(GREEN)\033[1mTarget $@ built$(NC)"
 
 # Object files for each source needed
-$(ODIR)/supermercato/%.o: src/supermercato/%.c config.h
-	@[ -d $(ODIR)/supermercato ] || mkdir -p $(ODIR)/supermercato
+$(ODIR)/%.o: src/%.c $(HEADERS) 
 	@$(CC) $(CFLAGS) -c -o $@ $<
 	@$(ECHO) "$(GREEN)Generating object file $@$(NC)"
 
-$(ODIR)/direttore/%.o: src/direttore/%.c config.h
-	@[ -d $(ODIR)/direttore ] || mkdir -p $(ODIR)/direttore
+llds: $(LLDS_OBJS)
+	@$(ECHO) "$(GREEN)Generating library lib$@$(NC)"
+	@ar rvs libllds.a $(LLDS_OBJS)
+	@$(ECHO) "$(GREEN)\033[1mTarget lib$@ built$(NC)"
+
+$(ODIR)/llds/%.o: src/llds/%.c $(LLDS_HEADERS)
+	@[ -d $(ODIR)/llds ] || mkdir -p $(ODIR)/llds
 	@$(CC) $(CFLAGS) -c -o $@ $<
 	@$(ECHO) "$(GREEN)Generating object file $@$(NC)"
+	
+lldstest.out: llds src/llds/test/test.c
+	$(CC) $(CFLAGS) -g src/llds/test/test.c -L . -lllds -o lldstest.out
+
 
 # Tests
-.PHONY: test1 test2
+.PHONY: test1 test2 lldstest
 
 test1: all
 
 test2: all
+
+lldstest: lldstest.out
+	valgrind --leak-check=full ./lldstest.out	

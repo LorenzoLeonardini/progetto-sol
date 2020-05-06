@@ -158,10 +158,10 @@ while read -r line; do
 		elif [[ $line == $(printf '\t')* ]]; then # new data
 			case "${line:1}" in
 				numero\ clienti:\ *) counter['n_client']=${line:17};;
-				aperture:*) incrementing="t_tot";;
+				aperture:*) incrementing="";;
 				numero\ chiusure:\ *) counter['n_close']=${line:18};;
 				numero\ prodotti:\ *) counter['n_prod']=${line:18};;
-				tempo\ clienti:*) incrementing="";;
+				tempo\ clienti:*) incrementing="t_tot";;
 			esac
 			continue
 		else # new id
