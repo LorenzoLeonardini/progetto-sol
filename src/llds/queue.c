@@ -48,6 +48,9 @@ void *queue_pop(queue_t queue) {
 		free(queue->head);
 		queue->head = next;
 		queue->size--;
+		if(queue->head == NULL) {
+			queue->tail = NULL;
+		}
 		return element;
 	}
 	return NULL;
@@ -66,6 +69,9 @@ void queue_remove(queue_t queue, void *element) {
 			queue_element_t *next = current->next->next;
 			free(current->next);
 			current->next = next;
+			if (current->next == NULL) {
+				queue->tail = current;
+			}
 			queue->size--;
 			return;
 		}
