@@ -11,20 +11,30 @@
 
 #include <pthread.h>
 
+#include "utils/consts.h"
+#include "utils/errors.h"
+#include "utils/config.h"
+
 #include "supermarket.h"
-#include "consts.h"
+#include "counter.h"
+#include "guard.h"
 
 static int sigquit = 0, sighup = 0;
 
 static int socket_fd = -1;
 
+static counter_t *counters;
+
 static void register_handlers();
 static void connect_to_manager();
+static void create_counters();
 
 void supermarket_launch() {
 	register_handlers();
-
 	connect_to_manager();
+	create_counters();
+	pthread_t guard_thread;
+	PTHREAD_CREATE("guard", &guard_thread, NULL, &guard_create, NULL);
 
 	int command;
 	int n_bytes;
@@ -47,8 +57,11 @@ void supermarket_launch() {
 
 	// TODO: handle
 	if(sigquit) {
+		guard_close();
+		pthread_join(guard_thread, NULL);
 	} else if (sighup) {
 	}
+	exit(EXIT_SUCCESS);
 }
 
 static void close_connections() {
@@ -101,4 +114,19 @@ static void connect_to_manager() {
 		}
 	}
 	atexit(close_connections);
+}
+
+static void free_counters() {
+	for(int i = 0; i < K; i++) {
+		counter_delete(counters[i]);
+	}
+	free(counters);
+}
+
+static void create_counters() {
+	counters = (counter_t*) malloc(sizeof(counter_t) * K);
+	for(int i = 0; i < K; i++) {
+		counters[i] = counter_create(i);
+	}
+	atexit(free_counters);
 }

@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "config.h"
-#include "consts.h"
+#include "utils/config.h"
+#include "utils/consts.h"
 
 #include "manager.h"
 #include "supermarket.h"

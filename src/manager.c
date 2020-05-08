@@ -13,7 +13,7 @@
 #include <pthread.h>
 
 #include "manager.h"
-#include "consts.h"
+#include "utils/consts.h"
 
 static int sigquit = 0, sighup = 0;
 

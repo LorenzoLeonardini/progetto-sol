@@ -56,15 +56,17 @@ void *queue_pop(queue_t queue) {
 	return NULL;
 }
 
-void queue_remove(queue_t queue, void *element) {
-	if(queue->head == NULL) return;
+int queue_remove(queue_t queue, void *element) {
+	int index = 0;
+	if(queue->head == NULL) return -1;
 	if(queue->head->element == element) {
 		// If item to be removed is head we can use pop
 		queue_pop(queue);
-		return;
+		return index;
 	}
 	queue_element_t *current = queue->head;
 	while(current->next != NULL) {
+		index++;
 		if(current->next->element == element) {
 			queue_element_t *next = current->next->next;
 			free(current->next);
@@ -73,10 +75,11 @@ void queue_remove(queue_t queue, void *element) {
 				queue->tail = current;
 			}
 			queue->size--;
-			return;
+			return index;
 		}
 		current = current->next;
 	}
+	return -1;
 }
 
 void queue_remove_all(queue_t queue) {
