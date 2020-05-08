@@ -12,26 +12,26 @@ endif
 
 # Defining compiler, flags, object files & socked dirs and useful variables
 CC = gcc
-CFLAGS = -Wall -pedantic
+CFLAGS = -Wall -pedantic -lpthread
 ODIR = objs
 SDIR = sockets
 GREEN = \033[0;32m
 NC = \033[0m
 
 # List all the files needed for each target
-_OBJS = main.o logger.o manager.o supermarket.o config.o
+_OBJS = main.o logger.o manager.o supermarket.o utils/config.o counter.o guard.o
 _LLDS_OBJS = llds/queue.o
 # Generate final list with object dir
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 LLDS_OBJS = $(patsubst %,$(ODIR)/%,$(_LLDS_OBJS))
 
 # List all the header files
-HEADERS = src/logger.h src/consts.h src/manager.h src/supermarket.h src/config.h
+HEADERS = src/utils/config.h src/utils/consts.h src/utils/errors.h src/logger.h src/manager.h src/supermarket.h src/counter.h src/guard.h
 LLDS_HEADERS = src/llds/queue.h
 
 .PHONY: all clean
 
-all: llds supermercato lldstest
+all: llds supermercato 
 
 # Delete intermediate files and others
 clean:
@@ -47,11 +47,12 @@ clean:
 # supermercato target
 supermercato: $(OBJS)
 	@$(ECHO) "$(GREEN)Generating executable $@.out$(NC)"
-	@$(CC) $(CFLAGS) $(OBJS) -o $@.out -g -L . -lllds -pthread
+	@$(CC) $(CFLAGS) $(OBJS) -o $@.out -g -L . -lllds
 	@$(ECHO) "$(GREEN)\033[1mTarget $@ built$(NC)"
 
 # Object files for each source needed
 $(ODIR)/%.o: src/%.c $(HEADERS) 
+	@[ -d $(ODIR)/utils ] || mkdir -p $(ODIR)/utils
 	@$(CC) $(CFLAGS) -c -o $@ $<
 	@$(ECHO) "$(GREEN)Generating object file $@$(NC)"
 
@@ -70,7 +71,10 @@ lldstest.out: llds src/llds/test/test.c
 
 
 # Tests
-.PHONY: test1 test2 lldstest
+.PHONY: test test1 test2 lldstest
+
+test: all
+	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all ./supermercato.out
 
 test1: all
 
