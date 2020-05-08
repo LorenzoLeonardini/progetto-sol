@@ -34,7 +34,7 @@ void supermarket_launch() {
 	connect_to_manager();
 	create_counters();
 	pthread_t guard_thread;
-	PTHREAD_CREATE("guard", &guard_thread, NULL, &guard_create, NULL);
+	PTHREAD_CREATE(&guard_thread, NULL, &guard_create, NULL);
 
 	int command;
 	int n_bytes;

@@ -1,7 +1,13 @@
 #include <pthread.h>
+#include <stdio.h>
+
+#include <stdlib.h>
+#include <errno.h>
+
+#include "utils/config.h"
+#include "utils/errors.h"
 
 #include "guard.h"
-#include "utils/config.h"
 
 static int customer_n;
 static int current_customer_n;
@@ -16,7 +22,7 @@ static void create_customer() {
 }
 
 void *guard_create(void *attr) {
-	pthread_mutex_lock(&guard_mtx);
+	PTHREAD_MUTEX_LOCK(&guard_mtx);
 	customer_n = 0;
 	current_customer_n = 0;
 	while(!should_close) {
@@ -24,23 +30,23 @@ void *guard_create(void *attr) {
 			create_customer();
 		}
 		while(C - current_customer_n < E && !should_close) {
-			pthread_cond_wait(&guard_cond, &guard_mtx);
+			PTHREAD_COND_WAIT(&guard_cond, &guard_mtx);
 		}
 	}
-	pthread_mutex_unlock(&guard_mtx);
+	PTHREAD_MUTEX_UNLOCK(&guard_mtx);
 	return NULL; // Useless, here to remove compiler warning
 }
 
 void guard_customer_exiting() {
-	pthread_mutex_lock(&guard_mtx);
+	PTHREAD_MUTEX_LOCK(&guard_mtx);
 	current_customer_n--;
-	pthread_cond_signal(&guard_cond);
-	pthread_mutex_unlock(&guard_mtx);
+	PTHREAD_COND_SIGNAL(&guard_cond);
+	PTHREAD_MUTEX_UNLOCK(&guard_mtx);
 }
 
 void guard_close() {
-	pthread_mutex_lock(&guard_mtx);
+	PTHREAD_MUTEX_LOCK(&guard_mtx);
 	should_close = 1;
-	pthread_cond_signal(&guard_cond);
-	pthread_mutex_unlock(&guard_mtx);
+	PTHREAD_COND_SIGNAL(&guard_cond);
+	PTHREAD_MUTEX_UNLOCK(&guard_mtx);
 }
