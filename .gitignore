@@ -2,3 +2,4 @@
 objs/
 sockets/
 .wakatime-project
+lib*.a
