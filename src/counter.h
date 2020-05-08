@@ -3,7 +3,7 @@
 
 #include <pthread.h>
 #include "llds/queue.h"
-#include "client.h"
+#include "customer.h"
 
 typedef enum { OPEN, CLOSED, CLOSING } status_t;
 typedef struct {
