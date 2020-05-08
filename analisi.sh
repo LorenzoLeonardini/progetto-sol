@@ -39,10 +39,10 @@ declare -A counter=(\
 )
 
 print_header() {
-	local dash_len=$(expr 48 '-' ${#LOG_FILE} / 2) # calculate ---- length
+	local dash_len=$((48 - ${#LOG_FILE} / 2)) # calculate ---- length
 	printf "%0.s-" $(seq 1 $dash_len) # print it
 	printf " ${BOLD}Analisi del file di log $LOG_FILE${CLEAR} " # print header and file name
-	dash_len=$(expr 96 '-' $dash_len '-' ${#LOG_FILE}) # calculate precise ---- length (needed for odd lengths)
+	dash_len=$((96 - $dash_len - ${#LOG_FILE})) # calculate precise ---- length (needed for odd lengths)
 	printf "%0.s-" $(seq 1 $dash_len) # print it
 	echo -e "\n"
 }
@@ -83,7 +83,7 @@ print_client() {
 print_counter() {
 	if [[ ! ${counter['id']} == -1 ]]; then
 		if [[ ! ${counter['n_close']} == "0" ]]; then
-			counter['t_avg']=$(expr ${counter['t_tot']} / ${counter['n_close']})
+			counter['t_avg']=$((${counter['t_tot']} / ${counter['n_close']}))
 		else
 			counter['t_avg']=${counter['t_tot']}
 		fi
@@ -153,7 +153,7 @@ while read -r line; do
 		# if it starts with two tabs, then it's a list
 		if [[ $line == $(printf '\t\t')* ]]; then
 			if [[ $incrementing != '' ]]; then
-				counter[$incrementing]=$(expr ${counter[$incrementing]} '+' ${line:2})
+				counter[$incrementing]=$((${counter[$incrementing]} + ${line:2}))
 			fi
 		elif [[ $line == $(printf '\t')* ]]; then # new data
 			case "${line:1}" in
