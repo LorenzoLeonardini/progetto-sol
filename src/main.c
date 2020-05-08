@@ -1,12 +1,19 @@
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "config.h"
 #include "consts.h"
 
 #include "manager.h"
 #include "supermarket.h"
 
-int main(void) {
-	// TODO: read config
+// The main function just starts the program. At first reads the config file
+// and then launches the manager and the supermarket in a child process
+int main(int argc, char **argv) {
+	read_config(argc, argv);
 	
 	// Create sockets folder
 	struct stat st = {0};
@@ -15,7 +22,10 @@ int main(void) {
 	}
 
 	int supermarket_pid;
-	if ((supermarket_pid = fork()) != 0) {
+	if ((supermarket_pid = fork()) == -1) {
+		perror("While trying to fork the process");
+		exit(EXIT_FAILURE);
+	} else if(supermarket_pid != 0) {
 		manager_launch(supermarket_pid);
 	} else {
 		supermarket_launch();

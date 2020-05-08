@@ -19,14 +19,14 @@ GREEN = \033[0;32m
 NC = \033[0m
 
 # List all the files needed for each target
-_OBJS = main.o logger.o manager.o supermarket.o
+_OBJS = main.o logger.o manager.o supermarket.o config.o
 _LLDS_OBJS = llds/queue.o
 # Generate final list with object dir
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 LLDS_OBJS = $(patsubst %,$(ODIR)/%,$(_LLDS_OBJS))
 
 # List all the header files
-HEADERS = src/logger.h src/consts.h src/manager.h src/supermarket.h
+HEADERS = src/logger.h src/consts.h src/manager.h src/supermarket.h src/config.h
 LLDS_HEADERS = src/llds/queue.h
 
 .PHONY: all clean
@@ -47,7 +47,7 @@ clean:
 # supermercato target
 supermercato: $(OBJS)
 	@$(ECHO) "$(GREEN)Generating executable $@.out$(NC)"
-	@$(CC) $(CFLAGS) $(OBJS) -o $@.out -g -L . -lllds
+	@$(CC) $(CFLAGS) $(OBJS) -o $@.out -g -L . -lllds -pthread
 	@$(ECHO) "$(GREEN)\033[1mTarget $@ built$(NC)"
 
 # Object files for each source needed
@@ -57,7 +57,7 @@ $(ODIR)/%.o: src/%.c $(HEADERS)
 
 llds: $(LLDS_OBJS)
 	@$(ECHO) "$(GREEN)Generating library lib$@$(NC)"
-	@ar rvs libllds.a $(LLDS_OBJS)
+	@ar r libllds.a $(LLDS_OBJS)
 	@$(ECHO) "$(GREEN)\033[1mTarget lib$@ built$(NC)"
 
 $(ODIR)/llds/%.o: src/llds/%.c $(LLDS_HEADERS)
@@ -66,7 +66,7 @@ $(ODIR)/llds/%.o: src/llds/%.c $(LLDS_HEADERS)
 	@$(ECHO) "$(GREEN)Generating object file $@$(NC)"
 	
 lldstest.out: llds src/llds/test/test.c
-	$(CC) $(CFLAGS) -g src/llds/test/test.c -L . -lllds -o lldstest.out
+	@$(CC) $(CFLAGS) -g src/llds/test/test.c -L . -lllds -o lldstest.out
 
 
 # Tests
