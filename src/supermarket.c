@@ -1,24 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
 
-#include <sys/types.h>
+#include <errno.h>
+#include <pthread.h>
+#include <signal.h>
+#include <unistd.h>
+
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/un.h>
 
-#include <signal.h>
-
-#include <pthread.h>
-
-#include "utils/consts.h"
 #include "utils/errors.h"
 #include "utils/config.h"
+#include "utils/consts.h"
 
-#include "supermarket.h"
 #include "counter.h"
 #include "guard.h"
 #include "logger.h"
+
+#include "supermarket.h"
 
 static int sigquit = 0, sighup = 0;
 

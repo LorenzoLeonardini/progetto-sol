@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <assert.h>
 #include <pthread.h>
 #include <time.h>
@@ -32,11 +33,12 @@ void *customer_thread_fnc(void *attr) {
 
 	// Do shopping
 	struct timespec tim;
-	tim.tv_sec = 0;
-	tim.tv_nsec = customer->shopping_time * 1000000L;
+	tim.tv_nsec = customer->shopping_time * 1000000L + customer->products * 30000000L;
+	tim.tv_sec = tim.tv_nsec / 1000000000L;
+	tim.tv_nsec = tim.tv_nsec % 1000000000L;
 	nanosleep(&tim, NULL);
 
-	logger_log_customer_data(customer->id, customer->shopping_time, 0, customer->products, 0);
+	logger_log_customer_data(customer->id, customer->shopping_time, customer->products * 300, customer->products, 0);
 	guard_customer_exiting();
 	customer_delete(customer);
 	return NULL;

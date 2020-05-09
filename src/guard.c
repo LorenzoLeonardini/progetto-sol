@@ -1,8 +1,8 @@
-#include <pthread.h>
 #include <stdio.h>
-
 #include <stdlib.h>
+
 #include <errno.h>
+#include <pthread.h>
 
 #include "utils/config.h"
 #include "utils/errors.h"

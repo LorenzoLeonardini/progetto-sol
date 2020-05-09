@@ -1,12 +1,11 @@
-#include <sys/stat.h>
-#include <unistd.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <unistd.h>
+#include <sys/stat.h>
+
 #include "utils/config.h"
 #include "utils/consts.h"
-
 #include "manager.h"
 #include "supermarket.h"
 
