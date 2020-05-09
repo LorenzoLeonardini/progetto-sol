@@ -65,7 +65,7 @@ static void read_config_file(char *file) {
 	fclose(file_fd);
 	
 	// Check if all necessary data is provided
-	if(C == -1 || K == -1 || E == -1) {
+	if(C == -1 || K == -1 || E == -1 || T == -1 || P == -1) {
 		fprintf(stderr, "Not all parameters were provided in config file\n");
 		exit(EXIT_FAILURE);
 	}

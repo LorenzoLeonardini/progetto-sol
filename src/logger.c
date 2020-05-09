@@ -5,15 +5,17 @@
 #include <stdlib.h>
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
 
 #include "logger.h"
 
 typedef struct {
-	int n_clients;
+	int n_customers;
 	int n_products;
 } GeneralData;
 
-// Logger functions will be called by 'dying' clients, even if one
+// Logger functions will be called by 'dying' customers, even if one
 // lock limits the performance, in this context it's not that important
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -37,14 +39,14 @@ void logger_init(char *filepath) {
 
 	// Initialize general block data
 	general_data = (GeneralData*) malloc(sizeof(GeneralData));
-	general_data->n_clients = 0;
+	general_data->n_customers = 0;
 	general_data->n_products = 0;
 
 	// Unlock mutex
 	pthread_mutex_unlock(&mutex);
 }
 
-void logger_log_client_data(int client_id, int tot_time, int que_time, int n_products, int que_changes) {
+void logger_log_customer_data(int customer_id, int tot_time, int que_time, int n_products, int que_changes) {
 	// Lock mutex
 	pthread_mutex_lock(&mutex);
 	// Makes sure everything has been initialized
@@ -53,14 +55,14 @@ void logger_log_client_data(int client_id, int tot_time, int que_time, int n_pro
 		return;
 	}
 
-	general_data->n_clients++;
+	general_data->n_customers++;
 	general_data->n_products += n_products;
 
 	if (current_mode != CLIENT) {
 		dprintf(file, "-- CLIENTI\n");
 		current_mode = CLIENT;
 	}
-	dprintf(file, "%d:\n", client_id);
+	dprintf(file, "%d:\n", customer_id);
 	dprintf(file, "\tTEMPO NEL SUPERMERCATO: %d\n", tot_time);
 	dprintf(file, "\tTEMPO IN CODA: %d\n", que_time);
 	dprintf(file, "\tNUMERO PRODOTTI: %d\n", n_products);
@@ -70,14 +72,15 @@ void logger_log_client_data(int client_id, int tot_time, int que_time, int n_pro
 	pthread_mutex_unlock(&mutex);
 }
 
-void logger_log_general_data() {
+void logger_log_general_data(int signal) {
 	pthread_mutex_lock(&mutex);
 	if (current_mode != GENERAL) {
 		dprintf(file, "-- GENERALE\n");
 		current_mode = GENERAL;
 	}
-	dprintf(file, "NUMERO CLIENTI: %d\n", general_data->n_clients);
+	dprintf(file, "NUMERO CLIENTI: %d\n", general_data->n_customers);
 	dprintf(file, "PRODOTTI VENDUTI: %d\n", general_data->n_products);
+	dprintf(file, "SIGNAL: %s\n", signal == SIGHUP ? "SIGHUP" : "SIGQUIT");
 	pthread_mutex_unlock(&mutex);
 }
 

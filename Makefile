@@ -19,14 +19,14 @@ GREEN = \033[0;32m
 NC = \033[0m
 
 # List all the files needed for each target
-_OBJS = main.o logger.o manager.o supermarket.o utils/config.o counter.o guard.o
-_LLDS_OBJS = llds/queue.o
+_OBJS = main.o logger.o manager.o supermarket.o utils/config.o counter.o guard.o customer.o
+LLDS_OBJS = llds/queue.o
 # Generate final list with object dir
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 LLDS_OBJS = $(patsubst %,$(ODIR)/%,$(_LLDS_OBJS))
 
 # List all the header files
-HEADERS = src/utils/config.h src/utils/consts.h src/utils/errors.h src/logger.h src/manager.h src/supermarket.h src/counter.h src/guard.h
+HEADERS = src/utils/config.h src/utils/consts.h src/utils/errors.h src/logger.h src/manager.h src/supermarket.h src/counter.h src/guard.h src/customer.h
 LLDS_HEADERS = src/llds/queue.h
 
 .PHONY: all clean

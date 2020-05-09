@@ -18,6 +18,7 @@
 #include "supermarket.h"
 #include "counter.h"
 #include "guard.h"
+#include "logger.h"
 
 static int sigquit = 0, sighup = 0;
 
@@ -30,6 +31,7 @@ static void connect_to_manager();
 static void create_counters();
 
 void supermarket_launch() {
+	logger_init("asd.txt");
 	register_handlers();
 	connect_to_manager();
 	create_counters();
@@ -57,11 +59,13 @@ void supermarket_launch() {
 
 	// TODO: handle
 	if(sigquit) {
-		guard_close(FALSE);
+		guard_close(TRUE);
 	} else if (sighup) {
 		guard_close(TRUE);
 	}
 	pthread_join(guard_thread, NULL);
+	logger_log_general_data(sigquit ? SIGQUIT : SIGHUP);
+	logger_cleanup();
 	exit(EXIT_SUCCESS);
 }
 

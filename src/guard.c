@@ -6,6 +6,7 @@
 
 #include "utils/config.h"
 #include "utils/errors.h"
+#include "customer.h"
 
 #include "guard.h"
 
@@ -17,7 +18,9 @@ static pthread_mutex_t guard_mtx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t guard_cond = PTHREAD_COND_INITIALIZER;
 
 static void create_customer() {
-	// TODO: create customer
+	customer_t customer = customer_create(customer_n);
+	pthread_t customer_thread;
+	PTHREAD_CREATE(&customer_thread, NULL, &customer_thread_fnc, customer);
 	customer_n++;
 	current_customer_n++;
 }
@@ -38,7 +41,7 @@ void *guard_create(void *attr) {
 		while(current_customer_n > 0)
 			PTHREAD_COND_WAIT(&guard_cond, &guard_mtx);
 	PTHREAD_MUTEX_UNLOCK(&guard_mtx);
-	pthread_exit(NULL);
+	return NULL;
 }
 
 void guard_customer_exiting() {
