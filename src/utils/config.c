@@ -4,7 +4,7 @@
 
 #include "config.h"
 
-int K = -1, C = -1, E = -1; 
+int K = -1, C = -1, E = -1, T = -1, P = -1;
 
 static void read_config_file(char *file);
 
@@ -51,6 +51,12 @@ static void read_config_file(char *file) {
 				break;
 			case 'E':
 				E = number;
+				break;
+			case 'T':
+				T = number;
+				break;
+			case 'P':
+				P = number;
 				break;
 		}
 	}
