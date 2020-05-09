@@ -12,6 +12,7 @@
 static int customer_n;
 static int current_customer_n;
 static int should_close = 0;
+static int should_gentle_close = 0;
 static pthread_mutex_t guard_mtx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t guard_cond = PTHREAD_COND_INITIALIZER;
 
@@ -33,8 +34,11 @@ void *guard_create(void *attr) {
 			PTHREAD_COND_WAIT(&guard_cond, &guard_mtx);
 		}
 	}
+	if(should_gentle_close)
+		while(current_customer_n > 0)
+			PTHREAD_COND_WAIT(&guard_cond, &guard_mtx);
 	PTHREAD_MUTEX_UNLOCK(&guard_mtx);
-	return NULL; // Useless, here to remove compiler warning
+	pthread_exit(NULL);
 }
 
 void guard_customer_exiting() {
@@ -44,9 +48,10 @@ void guard_customer_exiting() {
 	PTHREAD_MUTEX_UNLOCK(&guard_mtx);
 }
 
-void guard_close() {
+void guard_close(int gentle_close) {
 	PTHREAD_MUTEX_LOCK(&guard_mtx);
 	should_close = 1;
+	should_gentle_close = gentle_close;
 	PTHREAD_COND_SIGNAL(&guard_cond);
 	PTHREAD_MUTEX_UNLOCK(&guard_mtx);
 }

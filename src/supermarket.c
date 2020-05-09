@@ -57,10 +57,11 @@ void supermarket_launch() {
 
 	// TODO: handle
 	if(sigquit) {
-		guard_close();
-		pthread_join(guard_thread, NULL);
+		guard_close(FALSE);
 	} else if (sighup) {
+		guard_close(TRUE);
 	}
+	pthread_join(guard_thread, NULL);
 	exit(EXIT_SUCCESS);
 }
 
