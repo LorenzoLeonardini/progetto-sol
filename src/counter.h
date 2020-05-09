@@ -16,7 +16,7 @@ typedef counter_struct_t *counter_t;
 
 counter_t counter_create(int id);
 void counter_change_status(counter_t counter, status_t status);
-void counter_add_client(counter_t counter, client_t client);
+void counter_add_client(counter_t counter, customer_t customer);
 void counter_delete(counter_t counter);
 
 #endif

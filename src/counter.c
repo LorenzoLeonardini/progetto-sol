@@ -5,6 +5,7 @@
 #include <errno.h>
 
 #include "utils/errors.h"
+#include "customer.h"
 
 #include "counter.h"
 
@@ -23,13 +24,13 @@ void counter_change_status(counter_t counter, status_t status) {
 	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 }
 
-void counter_add_client(counter_t counter, client_t client) {
+void counter_add_customer(counter_t counter, customer_t customer) {
 	PTHREAD_MUTEX_LOCK(&counter->mtx);
 
 	if(counter->status != OPEN) {
 		fprintf(stderr, "Trying to add a client to a closed counter\n");
 	} else {
-		queue_add(counter->queue, client);
+		queue_add(counter->queue, customer);
 	}
 	
 	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
