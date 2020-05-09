@@ -14,10 +14,12 @@ readonly COUNTER_FILE="/tmp/sol_casse"
 readonly BOLD="\033[1m"
 readonly CLEAR="\033[0m"
 readonly RED="\033[31m"
+readonly GREEN="\033[32m"
 
 # variables used to store data and/or to cache data before printing
 mode=0 # 0: boh - 1: general - 2: clients - 3: counters
 incrementing='' # used to store which data to increment in counter dict
+signal='????'
 n_clients=0
 n_products=0
 
@@ -130,6 +132,7 @@ while read -r line; do
 	elif [[ $mode == 1 ]]; then
 		# we are in general data mode, retrieve all the possible data and save it
 		case "$line" in
+			signal:\ *) signal=${line:8};;
 			numero\ clienti:\ *) n_clients=${line:16};;
 			prodotti\ venduti:\ *)n_products=${line:18};;
 		esac
@@ -182,8 +185,9 @@ print_counter
 
 ## print nicely formatted data
 # general supermarket data
-echo -e "\tNumero Totale Clienti: $n_clients"
-echo -e "\tNumero Totale Prodotti Venduti: $n_products"
+echo -e "\t${GREEN}${BOLD}Supermercato Chiuso Con Segnale${CLEAR}: ${BOLD}$signal${CLEAR}"
+echo -e "\t${GREEN}${BOLD}Numero Totale Clienti${CLEAR}: ${BOLD}$n_clients${CLEAR}"
+echo -e "\t${GREEN}${BOLD}Numero Totale Prodotti Venduti${CLEAR}: ${BOLD}$n_products${CLEAR}"
 echo ""
 
 # client table
