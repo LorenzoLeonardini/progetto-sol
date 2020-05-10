@@ -2,8 +2,8 @@
 #define _COUNTER_H
 
 #include <pthread.h>
-#include "llds/queue.h"
 
+#include "llds/queue.h"
 #include "customer.h"
 
 typedef enum { OPEN, CLOSED, CLOSING } status_t;

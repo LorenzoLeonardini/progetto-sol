@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <pthread.h>
 
+#include "llds/queue.h"
 #include "utils/errors.h"
 #include "customer.h"
 
