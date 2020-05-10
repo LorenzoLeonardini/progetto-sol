@@ -23,6 +23,9 @@ static void create_customer() {
 	PTHREAD_CREATE(&customer_thread, NULL, &customer_thread_fnc, customer);
 	customer_n++;
 	current_customer_n++;
+	if(customer_n % 10 == 0) {
+		printf("[Supermarket] We've reached customer n.%d\n", customer_n);
+	}
 }
 
 void *guard_create(void *attr) {
@@ -37,9 +40,15 @@ void *guard_create(void *attr) {
 			PTHREAD_COND_WAIT(&guard_cond, &guard_mtx);
 		}
 	}
-	if(should_gentle_close)
-		while(current_customer_n > 0)
+	if(should_gentle_close) {
+		while(current_customer_n > 0) {
+			if(current_customer_n % 10 == 0) {
+				printf("[Supermarket] %d customers are exiting the supermarket\n", current_customer_n);
+				fflush(stdout);
+			}
 			PTHREAD_COND_WAIT(&guard_cond, &guard_mtx);
+		}
+	}
 	PTHREAD_MUTEX_UNLOCK(&guard_mtx);
 	return NULL;
 }
