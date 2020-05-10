@@ -19,14 +19,15 @@ GREEN = \033[0;32m
 NC = \033[0m
 
 # List all the files needed for each target
-_OBJS = main.o logger.o manager.o supermarket.o utils/config.o counter.o guard.o customer.o
-LLDS_OBJS = llds/queue.o
+_OBJS = counter.o customer.o guard.o logger.o main.o manager.o supermarket.o utils/config.o utils/network.o
+_LLDS_OBJS = llds/queue.o
 # Generate final list with object dir
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 LLDS_OBJS = $(patsubst %,$(ODIR)/%,$(_LLDS_OBJS))
 
 # List all the header files
-HEADERS = src/utils/config.h src/utils/consts.h src/utils/errors.h src/logger.h src/manager.h src/supermarket.h src/counter.h src/guard.h src/customer.h
+HEADERS = src/counter.h src/customer.h src/guard.h src/logger.h src/manager.h src/supermarket.h \
+		  src/utils/config.h src/utils/consts.h src/utils/errors.h src/utils/network.h
 LLDS_HEADERS = src/llds/queue.h
 
 .PHONY: all clean
@@ -45,13 +46,13 @@ clean:
 	@rm -rf *.a
 
 # supermercato target
-supermercato: $(OBJS)
+supermercato: $(OBJS) llds
 	@$(ECHO) "$(GREEN)Generating executable $@.out$(NC)"
 	@$(CC) $(CFLAGS) $(OBJS) -o $@.out -g -L . -lllds
 	@$(ECHO) "$(GREEN)\033[1mTarget $@ built$(NC)"
 
 # Object files for each source needed
-$(ODIR)/%.o: src/%.c $(HEADERS) 
+$(ODIR)/%.o: src/%.c $(HEADERS) $(LLDS_HEADERS) 
 	@[ -d $(ODIR)/utils ] || mkdir -p $(ODIR)/utils
 	@$(CC) $(CFLAGS) -c -o $@ $<
 	@$(ECHO) "$(GREEN)Generating object file $@$(NC)"
@@ -74,7 +75,7 @@ lldstest.out: llds src/llds/test/test.c
 .PHONY: test test1 test2 lldstest
 
 test: all
-	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all ./supermercato.out
+	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes ./supermercato.out
 
 test1: all
 
