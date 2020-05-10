@@ -4,9 +4,12 @@
 #include <assert.h>
 #include <pthread.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "utils/config.h"
 #include "utils/consts.h"
+#include "utils/network.h"
+
 #include "guard.h"
 #include "logger.h"
 
@@ -36,7 +39,21 @@ void *customer_thread_fnc(void *attr) {
 	tim.tv_nsec = customer->shopping_time * 1000000L + customer->products * 30000000L;
 	tim.tv_sec = tim.tv_nsec / 1000000000L;
 	tim.tv_nsec = tim.tv_nsec % 1000000000L;
-	nanosleep(&tim, NULL);
+	int ret = nanosleep(&tim, &tim);
+	if(ret == -1) {
+		fprintf(stderr, "Customer [%d] haven't waited %lu.%lu\n", customer->id, tim.tv_sec, tim.tv_nsec);
+	}
+
+	if(customer->products == 0) {
+		// Need to ask the manager permission to exit
+		int socket = connect_to_manager_server();
+		int message[2] = { SO_CUSTOMER_REQUEST_EXIT, customer->id };
+		write(socket, message, sizeof(int) * 2);
+		read(socket, message, sizeof(int) * 2);
+		close(socket);
+		assert(message[1] == customer->id);
+		assert(message[0] == SO_CUSTOMER_GRANT_EXIT);
+	}
 
 	logger_log_customer_data(customer->id, customer->shopping_time, customer->products * 300, customer->products, 0);
 	guard_customer_exiting();

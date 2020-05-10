@@ -87,6 +87,7 @@ void logger_cleanup() {
 	pthread_mutex_lock(&mutex);
 	// Close file and set file descriptor to -1, blocking all other function calls
 	close(file);
+	free(general_data);
 	file = -1;
 	pthread_mutex_unlock(&mutex);
 }
