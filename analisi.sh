@@ -10,6 +10,9 @@ fi
 readonly CLIENT_FILE="/tmp/sol_clienti"
 readonly COUNTER_FILE="/tmp/sol_casse"
 
+exec 3>$CLIENT_FILE
+exec 4>$COUNTER_FILE
+
 # Formatting codes
 readonly BOLD="\033[1m"
 readonly CLEAR="\033[0m"
@@ -55,12 +58,12 @@ horizontal_line() {
 }
 # echo the headline into the file, this will be passed to column
 print_client_header() {
-	echo -e "\t id  cliente \tn. prodotti acquistati\ttempo totale nel super.\ttempo tot. speso in coda\t n. di  code visitate \t" > $CLIENT_FILE
-	echo -e "\t-------------\t----------------------\t-----------------------\t------------------------\t----------------------\t" >> $CLIENT_FILE
+	echo -e "\t id  cliente \tn. prodotti acquistati\ttempo totale nel super.\ttempo tot. speso in coda\t n. di  code visitate \t" >&3
+	echo -e "\t-------------\t----------------------\t-----------------------\t------------------------\t----------------------\t" >&3
 }
 print_counter_header() {
-	echo -e "\tid cassa\tn. prodotti elaborati\tn. di clienti\ttempo tot. di apertura\ttempo medio di servizio\tn. di chiusure\t" > $COUNTER_FILE
-	echo -e "\t--------\t---------------------\t-------------\t----------------------\t-----------------------\t--------------\t" >> $COUNTER_FILE
+	echo -e "\tid cassa\tn. prodotti elaborati\tn. di clienti\ttempo tot. di apertura\ttempo medio di servizio\tn. di chiusure\t" >&4
+	echo -e "\t--------\t---------------------\t-------------\t----------------------\t-----------------------\t--------------\t" >&4
 }
 
 # prepare files with header
@@ -73,10 +76,10 @@ print_client() {
 		printf "\t%s\t%d\t%.3fs\t%.3fs\t%d\t\n" \
 			${client['id']} \
 			${client['n_prod']} \
-			${client['t_tot']} \
-			${client['t_que']} \
+			"${client['t_tot']}e-3" \
+			"${client['t_que']}e-3" \
 			${client['n_que']} \
-			>> $CLIENT_FILE
+			>&3
 		client['id']=-1
 	fi
 }
@@ -93,10 +96,10 @@ print_counter() {
 			${counter['id']} \
 			${counter['n_prod']} \
 			${counter['n_client']} \
-			$(echo "scale = 3; ${counter['t_tot']} / 1000" | bc) \
-			$(echo "scale = 3; ${counter['t_avg']} / 1000" | bc) \
+			"${counter['t_tot']}e-3" \
+			"${counter['t_avg']}e-3" \
 			${counter['n_close']} \
-			>> $COUNTER_FILE
+			>&4
 		counter['id']=-1
 		counter['t_tot']=0
 	fi
@@ -145,8 +148,8 @@ while read -r line; do
 		else
 			# every time value is converted from millis to seconds. To me, a log file with milliseconds makes more sense
 			case "${line:1}" in
-				tempo\ nel\ supermercato:\ *) client['t_tot']=$(echo "scale = 3; ${line:24} / 1000" | bc);;
-				tempo\ in\ coda:\ *) client['t_que']=$(echo "scale = 3; ${line:15} / 1000" | bc);;
+				tempo\ nel\ supermercato:\ *) client['t_tot']=${line:24};;
+				tempo\ in\ coda:\ *) client['t_que']=${line:15};;
 				numero\ prodotti:\ *) client['n_prod']=${line:17};;
 				numero\ cambi\ coda:\ *) client['n_que']=${line:20};;
 			esac
@@ -189,6 +192,9 @@ echo -e "\t${GREEN}${BOLD}Supermercato Chiuso Con Segnale${CLEAR}: ${BOLD}$signa
 echo -e "\t${GREEN}${BOLD}Numero Totale Clienti${CLEAR}: ${BOLD}$n_clients${CLEAR}"
 echo -e "\t${GREEN}${BOLD}Numero Totale Prodotti Venduti${CLEAR}: ${BOLD}$n_products${CLEAR}"
 echo ""
+
+exec 3>&-
+exec 4>&-
 
 # client table
 horizontal_line
