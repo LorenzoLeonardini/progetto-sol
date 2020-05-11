@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include "utils/config.h"
+#include "utils/consts.h"
 #include "utils/errors.h"
 #include "customer.h"
 
@@ -24,7 +25,7 @@ static void create_customer() {
 	customer_n++;
 	current_customer_n++;
 	if(customer_n % 10 == 0) {
-		printf("[Supermarket] We've reached customer n.%d\n", customer_n);
+		SUPERMARKET_LOG("We've reached customer n.%d\n", customer_n);
 	}
 }
 
@@ -43,8 +44,7 @@ void *guard_create(void *attr) {
 	if(should_gentle_close) {
 		while(current_customer_n > 0) {
 			if(current_customer_n % 10 == 0) {
-				printf("[Supermarket] %d customers are exiting the supermarket\n", current_customer_n);
-				fflush(stdout);
+				SUPERMARKET_LOG("%d customers are exiting the supermarket\n", current_customer_n);
 			}
 			PTHREAD_COND_WAIT(&guard_cond, &guard_mtx);
 		}

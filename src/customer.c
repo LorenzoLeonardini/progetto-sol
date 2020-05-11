@@ -41,7 +41,7 @@ void *customer_thread_fnc(void *attr) {
 	tim.tv_nsec = tim.tv_nsec % 1000000000L;
 	int ret = nanosleep(&tim, &tim);
 	if(ret == -1) {
-		fprintf(stderr, "Customer [%d] haven't waited %lu.%lu\n", customer->id, tim.tv_sec, tim.tv_nsec);
+		SUPERMARKET_ERROR("Customer [%d] haven't waited %lu.%lu\n", customer->id, tim.tv_sec, tim.tv_nsec);
 	}
 
 	if(customer->products == 0) {

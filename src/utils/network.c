@@ -25,12 +25,12 @@ int connect_to_manager_server() {
 	while(connect(socket_fd, (struct sockaddr*) &sa, sizeof(sa)) == -1) {
 		if(errno == ENOENT) {
 			if(!max_attempts--) {
-				fprintf(stderr, "Connection timed out\n");
+				SUPERMARKET_ERROR("Connection timed out\n");
 				exit(EXIT_FAILURE);
 			}
 			sleep(1);
 		} else {
-			fprintf(stderr, "Can't connect to manager socket\n");
+			SUPERMARKET_ERROR("Can't connect to manager socket\n");
 			exit(EXIT_FAILURE);
 		}
 	}

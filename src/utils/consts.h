@@ -4,6 +4,18 @@
 #define UNIX_PATH_MAX 108
 #define SOCKET_PATH(x) "./sockets/" x
 
+#define MANAGER_LOG(...) \
+	printf("\033[33m[Manager]\033[0m " __VA_ARGS__); \
+	fflush(stdout)
+#define MANAGER_ERROR(...) \
+	fprintf(stderr, "\033[31m[Manager]\033[0m " __VA_ARGS__)
+
+#define SUPERMARKET_LOG(...) \
+	printf("\033[32m[Supermarket]\033[0m " __VA_ARGS__); \
+	fflush(stdout)
+#define SUPERMARKET_ERROR(...) \
+	fprintf(stderr, "\033[31m[Supermarket]\033[0m " __VA_ARGS__)
+
 #define TRUE 1
 #define FALSE 0
 
