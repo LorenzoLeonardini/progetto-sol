@@ -7,6 +7,7 @@ typedef struct {
 	int products;
 	int current_queue;
 	int being_served;
+	pthread_cond_t waiting_in_line;
 } customer_struct_t;
 typedef customer_struct_t *customer_t;
 

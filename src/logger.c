@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+#include "llds/queue.h"
+#include "counter.h"
+
 #include "logger.h"
 
 typedef struct {
@@ -66,6 +69,35 @@ void logger_log_customer_data(int customer_id, int tot_time, int que_time, int n
 	dprintf(file, "\tTEMPO IN CODA: %d\n", que_time);
 	dprintf(file, "\tNUMERO PRODOTTI: %d\n", n_products);
 	dprintf(file, "\tNUMERO CAMBI CODA: %d\n", que_changes);
+
+	// Unlock
+	pthread_mutex_unlock(&mutex);
+}
+
+void logger_log_counter_data(counter_t counter) {
+	// Lock mutex
+	pthread_mutex_lock(&mutex);
+	// Makes sure everything has been initialized
+	if (file == -1) {
+		pthread_mutex_unlock(&mutex);
+		return;
+	}
+
+	if (current_mode != COUNTERS) {
+		dprintf(file, "-- CASSE\n");
+		current_mode = COUNTERS;
+	}
+	dprintf(file, "%d:\n", counter->id);
+	dprintf(file, "\tNUMERO CLIENTI: %d\n", counter->tot_customers);
+	dprintf(file, "\tTEMPO CLIENTI:\n");
+	dprintf(file, "\tNUMERO PRODOTTI: %d\n", counter->tot_products);
+	dprintf(file, "\tNUMERO CHIUSURE: %d\n", counter->open_count);
+	dprintf(file, "\tAPERTURE:\n");
+	unsigned long long *t;
+	while((t = (unsigned long long*) queue_pop(counter->open_time)) != NULL) {
+		dprintf(file, "\t\t%llu\n", *t);
+		free(t);
+	}
 
 	// Unlock
 	pthread_mutex_unlock(&mutex);
