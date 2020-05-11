@@ -5,7 +5,7 @@
 
 #include "config.h"
 
-int K = -1, C = -1, E = -1, T = -1, P = -1;
+int K = -1, C = -1, E = -1, T = -1, P = -1, I = -1, W = -1;
 
 static void read_config_file(char *file);
 
@@ -59,6 +59,12 @@ static void read_config_file(char *file) {
 			case 'P':
 				P = number;
 				break;
+			case 'I':
+				I = number;
+				break;
+			case 'W':
+				W = number;
+				break;
 		}
 	}
 	
@@ -66,7 +72,8 @@ static void read_config_file(char *file) {
 	fclose(file_fd);
 	
 	// Check if all necessary data is provided
-	if(C == -1 || K == -1 || E == -1 || T == -1 || P == -1) {
+	if(C == -1 || K == -1 || E == -1 || T == -1 
+			|| P == -1 || I == -1 || W == -1) {
 		fprintf(stderr, "Not all parameters were provided in config file\n");
 		exit(EXIT_FAILURE);
 	}

@@ -20,7 +20,7 @@ NC = \033[0m
 
 # List all the files needed for each target
 _OBJS = counter.o customer.o guard.o logger.o main.o manager.o supermarket.o utils/config.o utils/network.o
-_LLDS_OBJS = llds/queue.o
+_LLDS_OBJS = llds/queue.o llds/read_write_lock.o
 # Generate final list with object dir
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 LLDS_OBJS = $(patsubst %,$(ODIR)/%,$(_LLDS_OBJS))
@@ -28,7 +28,7 @@ LLDS_OBJS = $(patsubst %,$(ODIR)/%,$(_LLDS_OBJS))
 # List all the header files
 HEADERS = src/counter.h src/customer.h src/guard.h src/logger.h src/manager.h src/supermarket.h \
 		  src/utils/config.h src/utils/consts.h src/utils/errors.h src/utils/network.h
-LLDS_HEADERS = src/llds/queue.h
+LLDS_HEADERS = src/llds/queue.h src/llds/read_write_lock.h
 
 .PHONY: all clean
 
