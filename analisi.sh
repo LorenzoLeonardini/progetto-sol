@@ -7,10 +7,10 @@ if [[ $# == 1 ]]; then
 else
 	readonly LOG_FILE="esempio.log"
 fi
-readonly CLIENT_FILE="/tmp/sol_clienti"
+readonly CUSTOMER_FILE="/tmp/sol_clienti"
 readonly COUNTER_FILE="/tmp/sol_casse"
 
-exec 3>$CLIENT_FILE
+exec 3>$CUSTOMER_FILE
 exec 4>$COUNTER_FILE
 
 # Formatting codes
@@ -20,14 +20,14 @@ readonly RED="\033[31m"
 readonly GREEN="\033[32m"
 
 # variables used to store data and/or to cache data before printing
-mode=0 # 0: boh - 1: general - 2: clients - 3: counters
+mode=0 # 0: boh - 1: general - 2: customers - 3: counters
 incrementing='' # used to store which data to increment in counter dict
 signal='????'
-n_clients=0
+n_customers=0
 n_products=0
 
-# dictionaries for client and counter objects values
-declare -A client=(\
+# dictionaries for customer and counter objects values
+declare -A customer=(\
 	["id"]=-1 \
 	["n_prod"]=0 \
 	["t_tot"]=0 \
@@ -37,7 +37,7 @@ declare -A client=(\
 declare -A counter=(\
 	["id"]=-1 \
 	["n_prod"]=0 \
-	["n_client"]=0 \
+	["n_customer"]=0 \
 	["t_tot"]=0 \
 	["t_avg"]=0 \
 	["n_close"]=0 \
@@ -57,7 +57,7 @@ horizontal_line() {
 	echo "  ----------------------------------------------------------------------------------------------------------------------"
 }
 # echo the headline into the file, this will be passed to column
-print_client_header() {
+print_customer_header() {
 	echo -e "\t id  cliente \tn. prodotti acquistati\ttempo totale nel super.\ttempo tot. speso in coda\t n. di  code visitate \t" >&3
 	echo -e "\t-------------\t----------------------\t-----------------------\t------------------------\t----------------------\t" >&3
 }
@@ -67,20 +67,20 @@ print_counter_header() {
 }
 
 # prepare files with header
-print_client_header
+print_customer_header
 print_counter_header
 
-# print formatted client data into temporary file
-print_client() {
-	if [[ ! ${client['id']} == -1 ]]; then
+# print formatted customer data into temporary file
+print_customer() {
+	if [[ ! ${customer['id']} == -1 ]]; then
 		printf "\t%s\t%d\t%.3fs\t%.3fs\t%d\t\n" \
-			${client['id']} \
-			${client['n_prod']} \
-			"${client['t_tot']}e-3" \
-			"${client['t_que']}e-3" \
-			${client['n_que']} \
+			${customer['id']} \
+			${customer['n_prod']} \
+			"${customer['t_tot']}e-3" \
+			"${customer['t_que']}e-3" \
+			${customer['n_que']} \
 			>&3
-		client['id']=-1
+		customer['id']=-1
 	fi
 }
 
@@ -95,7 +95,7 @@ print_counter() {
 		printf "\t%s\t%d\t%d\t%.3fs\t%.3fs\t%d\t\n" \
 			${counter['id']} \
 			${counter['n_prod']} \
-			${counter['n_client']} \
+			${counter['n_customer']} \
 			"${counter['t_tot']}e-3" \
 			"${counter['t_avg']}e-3" \
 			${counter['n_close']} \
@@ -136,22 +136,22 @@ while read -r line; do
 		# we are in general data mode, retrieve all the possible data and save it
 		case "$line" in
 			signal:\ *) signal=${line:8};;
-			numero\ clienti:\ *) n_clients=${line:16};;
+			numero\ clienti:\ *) n_customers=${line:16};;
 			prodotti\ venduti:\ *)n_products=${line:18};;
 		esac
 	elif [[ $mode == 2 ]]; then
-		# client mode
-		# if it doesn't start with tab, it's a new client and a new id
+		# customer mode
+		# if it doesn't start with tab, it's a new customer and a new id
 		if [[ ! $line == $(printf '\t')* ]]; then
-			print_client
-			client['id']="${line::-1}"
+			print_customer
+			customer['id']="${line::-1}"
 		else
 			# every time value is converted from millis to seconds. To me, a log file with milliseconds makes more sense
 			case "${line:1}" in
-				tempo\ nel\ supermercato:\ *) client['t_tot']=${line:24};;
-				tempo\ in\ coda:\ *) client['t_que']=${line:15};;
-				numero\ prodotti:\ *) client['n_prod']=${line:17};;
-				numero\ cambi\ coda:\ *) client['n_que']=${line:20};;
+				tempo\ nel\ supermercato:\ *) customer['t_tot']=${line:24};;
+				tempo\ in\ coda:\ *) customer['t_que']=${line:15};;
+				numero\ prodotti:\ *) customer['n_prod']=${line:17};;
+				numero\ cambi\ coda:\ *) customer['n_que']=${line:20};;
 			esac
 		fi
 	elif [[ $mode == 3 ]]; then
@@ -163,7 +163,7 @@ while read -r line; do
 			fi
 		elif [[ $line == $(printf '\t')* ]]; then # new data
 			case "${line:1}" in
-				numero\ clienti:\ *) counter['n_client']=${line:17};;
+				numero\ clienti:\ *) counter['n_customer']=${line:17};;
 				aperture:*) incrementing="";;
 				numero\ chiusure:\ *) counter['n_close']=${line:18};;
 				numero\ prodotti:\ *) counter['n_prod']=${line:18};;
@@ -182,23 +182,23 @@ done < $LOG_FILE
 # restore default IFS
 IFS=$old_IFS
 
-# print final client and counter that have not been printed yes
-print_client
+# print final customer and counter that have not been printed yes
+print_customer
 print_counter
 
 ## print nicely formatted data
 # general supermarket data
 echo -e "\t${GREEN}${BOLD}Supermercato Chiuso Con Segnale${CLEAR}: ${BOLD}$signal${CLEAR}"
-echo -e "\t${GREEN}${BOLD}Numero Totale Clienti${CLEAR}: ${BOLD}$n_clients${CLEAR}"
+echo -e "\t${GREEN}${BOLD}Numero Totale Clienti${CLEAR}: ${BOLD}$n_customers${CLEAR}"
 echo -e "\t${GREEN}${BOLD}Numero Totale Prodotti Venduti${CLEAR}: ${BOLD}$n_products${CLEAR}"
 echo ""
 
 exec 3>&-
 exec 4>&-
 
-# client table
+# customer table
 horizontal_line
-column -t -s $'\t' -o " | " -R 3,4,5,6 < $CLIENT_FILE
+column -t -s $'\t' -o " | " -R 3,4,5,6 < $CUSTOMER_FILE
 horizontal_line
 
 echo "" # blank line
@@ -209,5 +209,5 @@ column -t -s $'\t' -o " | " -R 3,4,5,6,7 < $COUNTER_FILE
 horizontal_line
 
 # clean temporary files
-rm $CLIENT_FILE $COUNTER_FILE
+rm $CUSTOMER_FILE $COUNTER_FILE
 
