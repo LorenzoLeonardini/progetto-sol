@@ -39,6 +39,7 @@ declare -A counter=(\
 	["n_prod"]=0 \
 	["n_customer"]=0 \
 	["t_tot"]=0 \
+	["t_cust"]=0 \
 	["t_avg"]=0 \
 	["n_close"]=0 \
 )
@@ -88,9 +89,9 @@ print_customer() {
 print_counter() {
 	if [[ ! ${counter['id']} == -1 ]]; then
 		if [[ ! ${counter['n_close']} == "0" ]]; then
-			counter['t_avg']=$((${counter['t_tot']} / ${counter['n_close']}))
+			counter['t_avg']=$((${counter['t_cust']} / ${counter['n_close']}))
 		else
-			counter['t_avg']=${counter['t_tot']}
+			counter['t_avg']=${counter['t_cust']}
 		fi
 		printf "\t%s\t%d\t%d\t%.3fs\t%.3fs\t%d\t\n" \
 			${counter['id']} \
@@ -164,10 +165,10 @@ while read -r line; do
 		elif [[ $line == $(printf '\t')* ]]; then # new data
 			case "${line:1}" in
 				numero\ clienti:\ *) counter['n_customer']=${line:17};;
-				aperture:*) incrementing="";;
+				aperture:*) incrementing="t_tot";;
 				numero\ chiusure:\ *) counter['n_close']=${line:18};;
 				numero\ prodotti:\ *) counter['n_prod']=${line:18};;
-				tempo\ clienti:*) incrementing="t_tot";;
+				tempo\ clienti:*) incrementing="t_cust";;
 			esac
 			continue
 		else # new id
