@@ -6,11 +6,12 @@
 #include "llds/queue.h"
 #include "customer.h"
 
-typedef enum { OPEN, CLOSED, CLOSING } status_t;
+typedef enum { OPEN, CLOSED, CLOSING, GO_HOME, WENT_HOME } status_t;
 typedef struct {
 	int id;
 	queue_t queue;
 	pthread_mutex_t mtx;
+	pthread_cond_t idle;
 	status_t status;
 	int tot_customers;
 	int tot_products;
@@ -22,10 +23,10 @@ typedef counter_struct_t *counter_t;
 
 counter_t counter_create(int id);
 void counter_change_status(counter_t counter, status_t status);
-void counter_add_client(counter_t counter, customer_t customer);
+void counter_add_customer(counter_t counter, customer_t customer);
+void *counter_thread_fnc(void *args);
 int counter_queue_length(counter_t counter);
 void counter_open(counter_t counter);
-void counter_close(counter_t counter);
 void counter_delete(counter_t counter);
 
 #endif

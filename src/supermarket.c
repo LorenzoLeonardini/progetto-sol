@@ -70,15 +70,14 @@ void supermarket_launch() {
 		// Send the data and get a response
 		int connection = connect_to_manager_server();
 		write(connection, message, length);
-		int n_bytes = read(connection, message, sizeof(int) * 2);
+		read(connection, message, sizeof(int) * 2);
 		close(connection);
 		// Process the response
 		assert(message[0] == SO_DESIRED_COUNTERS);
 		int desired_counters = message[1];
 		free(message);
 
-		printf("Manager requested %d counters\n", desired_counters);
-		fflush(stdout);
+		SUPERMARKET_LOG("Manager requested %d counters\n", desired_counters);
 
 		if(desired_counters != opened_counters) {
 			rw_lock_start_write(counters_status);
@@ -89,8 +88,7 @@ void supermarket_launch() {
 			rw_lock_done_write(counters_status);
 		}
 	}
-	printf("[Supermarket] received signal, stopping\n");
-	fflush(stdout);
+	SUPERMARKET_LOG("Received signal, stopping\n");
 	
 	// From now on it's better not to be interrupted
 	register_handlers(TRUE);
@@ -102,13 +100,24 @@ void supermarket_launch() {
 		guard_close(TRUE);
 	}
 	pthread_join(guard_thread, NULL);
-	printf("[Supermarket] All the customers exited the supermarket\n");
-	printf("[Supermarket] Closing all counters\n");
-	fflush(stdout);
+	SUPERMARKET_LOG("All the customers exited the supermarket\n");
+	SUPERMARKET_LOG("Closing all counters\n");
 	while(opened_counters > 0)
 		close_counter();
-	printf("[Supermarket] All counters closed\n");
-	fflush(stdout);
+	for(int i = 0; i < K; i++) {
+		counter_t closing = counters[i];
+		PTHREAD_MUTEX_LOCK(&closing->mtx);
+		while(closing->status != CLOSED) {
+			PTHREAD_COND_SIGNAL(&closing->idle);
+			PTHREAD_COND_WAIT(&closing->idle, &closing->mtx);
+		}
+		closing->status = GO_HOME;
+		PTHREAD_COND_SIGNAL(&closing->idle);
+		while(closing->status != WENT_HOME)
+			PTHREAD_COND_WAIT(&closing->idle, &closing->mtx);
+		PTHREAD_MUTEX_UNLOCK(&closing->mtx);
+	}
+	SUPERMARKET_LOG("All counters closed\n");
 
 	// Comunicate the manager every customer exited and it can stop listening
 	// for connections
@@ -128,8 +137,7 @@ void supermarket_launch() {
 static void close_connections() {
 	// After closing, the file descriptors are reset to -1 to avoid
 	// problems in case this function is called twice (or more)
-	printf("[Supermarket] Supermarket is shutting down...\n");
-	fflush(stdout);
+	SUPERMARKET_LOG("Supermarket is shutting down...\n");
 }
 
 static void gestore(int signum) {
@@ -150,8 +158,7 @@ static void register_handlers(int restart) {
 }
 
 static void free_counters() {
-	printf("[Supermarket] Cleaning up counters\n");
-	fflush(stdout);
+	SUPERMARKET_LOG("Cleaning up counters\n");
 	for(int i = 0; i < K; i++) {
 		counter_delete(counters[i]);
 	}
@@ -163,19 +170,27 @@ static void free_counters() {
 static void create_counters() {
 	counters_status = rw_lock_create();
 
+	pthread_t thread;
 	counters = (counter_t*) malloc(sizeof(counter_t) * K);
 	for(int i = 0; i < K; i++) {
 		counters[i] = counter_create(i);
+		PTHREAD_CREATE(&thread, NULL, counter_thread_fnc, counters[i]);
 	}
 	atexit(free_counters);
 }
 
 static void open_counter() {
 	counter_open(counters[opened_counters]);
+	PTHREAD_COND_SIGNAL(&counters[opened_counters]->idle);
 	opened_counters++;
 }
 
 static void close_counter() {
 	opened_counters--;
-	counter_close(counters[opened_counters]);
+	SUPERMARKET_LOG("Closing counter %d\n", opened_counters);
+	counter_t closing = counters[opened_counters];
+	PTHREAD_MUTEX_LOCK(&closing->mtx);
+	closing->status = CLOSING;
+	PTHREAD_COND_SIGNAL(&closing->idle);
+	PTHREAD_MUTEX_UNLOCK(&closing->mtx);
 }
