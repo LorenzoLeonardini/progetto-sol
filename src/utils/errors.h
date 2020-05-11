@@ -22,6 +22,12 @@
 #define PTHREAD_MUTEX_UNLOCK(mutex_t) \
 	PTHREAD_ERROR(pthread_mutex_unlock(mutex_t), "Unlocking " #mutex_t " mutex")
 
+#define PTHREAD_COND_INIT_ERR(cond_t, attr) \
+	PTHREAD_ERROR(pthread_cond_init(cond_t, attr), "Creating " #cond_t " condition variable")
+
+#define PTHREAD_COND_DESTROY_ERR(cond_t) \
+	PTHREAD_ERROR(pthread_cond_destroy(cond_t), "Destroying " #cond_t " condition variable")
+
 #define PTHREAD_COND_WAIT(cond_t, mutex_t) \
 	PTHREAD_ERROR(pthread_cond_wait(cond_t, mutex_t), "Waiting " #cond_t " condition")
 
