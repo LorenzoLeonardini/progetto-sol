@@ -6,10 +6,10 @@ typedef struct {
 	pthread_cond_t read_go;
 	pthread_cond_t write_go;
 
-	int active_readers;
-	int active_writers;
-	int waiting_readers;
-	int waiting_writers;
+	unsigned int active_readers;
+	unsigned int active_writers;
+	unsigned int waiting_readers;
+	unsigned int waiting_writers;
 } rw_lock_struct_t;
 typedef rw_lock_struct_t *rw_lock_t;
 
@@ -18,6 +18,6 @@ void rw_lock_start_read(rw_lock_t rw_lock);
 void rw_lock_done_read(rw_lock_t rw_lock);
 void rw_lock_start_write(rw_lock_t rw_lock);
 void rw_lock_done_write(rw_lock_t rw_lock);
-void rw_lock_delete(rw_lock_t rw_lock);
+void rw_lock_destroy(rw_lock_t rw_lock);
 
 #endif

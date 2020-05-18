@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "../queue.h"
+#include "../hashmap.h"
 
 typedef struct {
 	int value;
@@ -35,12 +36,19 @@ int main(void) {
 		printf("QUEUE (%d): %d\n", queue->size, curr->value);
 	}
 
+	queue_destroy(queue);
+
+	hashmap_t hm = hashmap_create(10);
+	hashmap_add(hm, 3, n1);
+	void *r = hashmap_remove(hm, 3);
+	printf("eq %d\n", r == n1 ? 1 : 0);
+	hashmap_destroy(hm);
+
 	free(n1);
 	free(n2);
 	free(n3);
 	free(n4);
 	free(n5);
 
-	queue_delete(queue);
 	return 0;
 }

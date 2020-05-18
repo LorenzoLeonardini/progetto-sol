@@ -9,7 +9,7 @@ typedef struct que_el {
 typedef struct {
 	queue_element_t *head;
 	queue_element_t *tail;
-	int size;
+	unsigned int size;
 } queue_struct_t;
 
 typedef queue_struct_t *queue_t;
@@ -19,8 +19,9 @@ void *queue_head(queue_t queue);
 void *queue_tail(queue_t queue);
 void queue_add(queue_t queue, void *element);
 void *queue_pop(queue_t queue);
-int queue_remove(queue_t queue, void *element);
+void *queue_remove(queue_t queue, void *element);
+void *queue_remove_cmp(queue_t queue, void *element, int (*cmp)(void*, void*));
 void queue_remove_all(queue_t queue);
-void queue_delete(queue_t queue);
+void queue_destroy(queue_t queue);
 
 #endif

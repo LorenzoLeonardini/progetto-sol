@@ -2,6 +2,8 @@
 
 #include "queue.h"
 
+static int compare_pointer(void *a, void *b);
+
 queue_t queue_create() {
 	queue_t queue = (queue_t) malloc(sizeof(queue_struct_t));
 	queue->head = NULL;
@@ -56,30 +58,34 @@ void *queue_pop(queue_t queue) {
 	return NULL;
 }
 
-int queue_remove(queue_t queue, void *element) {
+void *queue_remove(queue_t queue, void *element) {
+	return queue_remove_cmp(queue, element, compare_pointer);
+}
+
+void *queue_remove_cmp(queue_t queue, void *element, int (*cmp)(void*, void*)) {
 	int index = 0;
-	if(queue->head == NULL) return -1;
-	if(queue->head->element == element) {
+	if(queue->head == NULL) return NULL;
+	if(cmp(queue->head->element, element) == 0) {
 		// If item to be removed is head we can use pop
-		queue_pop(queue);
-		return index;
+		return queue_pop(queue);
 	}
 	queue_element_t *current = queue->head;
 	while(current->next != NULL) {
 		index++;
-		if(current->next->element == element) {
+		if(cmp(current->next->element, element) == 0) {
 			queue_element_t *next = current->next->next;
+			void *e = current->next->element;
 			free(current->next);
 			current->next = next;
 			if (current->next == NULL) {
 				queue->tail = current;
 			}
 			queue->size--;
-			return index;
+			return e;
 		}
 		current = current->next;
 	}
-	return -1;
+	return NULL;
 }
 
 void queue_remove_all(queue_t queue) {
@@ -88,9 +94,15 @@ void queue_remove_all(queue_t queue) {
 	}
 }
 
-void queue_delete(queue_t queue) {
+void queue_destroy(queue_t queue) {
 	if(queue->head != NULL) {
 		queue_remove_all(queue);
 	}
 	free(queue);
+}
+
+static int compare_pointer(void *a, void *b) {
+	if(a < b) return -1;
+	if(a > b) return 1;
+	return 0;
 }

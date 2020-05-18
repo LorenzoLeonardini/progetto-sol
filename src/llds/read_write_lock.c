@@ -4,8 +4,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-// TODO: shouldn't use from main project
-#include "../utils/errors.h"
+#include "errors.h"
 
 #include "read_write_lock.h"
 
@@ -77,7 +76,7 @@ void rw_lock_done_write(rw_lock_t rw_lock) {
 	PTHREAD_MUTEX_UNLOCK(&rw_lock->mtx);
 }
 
-void rw_lock_delete(rw_lock_t rw_lock) {
+void rw_lock_destroy(rw_lock_t rw_lock) {
 	PTHREAD_MUTEX_DESTROY_ERR(&rw_lock->mtx);
 	PTHREAD_COND_DESTROY_ERR(&rw_lock->read_go);
 	PTHREAD_COND_DESTROY_ERR(&rw_lock->write_go);
