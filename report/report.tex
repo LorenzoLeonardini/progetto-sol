@@ -1,0 +1,69 @@
+\documentclass[a4paper,11pt,twoside] {article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage[italian]{babel}
+\usepackage{fancyhdr}
+\usepackage[textwidth=16cm, textheight=25cm]{geometry}
+\usepackage{graphicx}
+\graphicspath{{images/}}
+\usepackage{wrapfig}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{dirtytalk}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+\usepackage{hyperref}
+
+\tikzstyle{process} = [rectangle, draw, fill=blue!20, 
+    text width=7em, text centered, rounded corners, minimum height=2.5em]
+\tikzstyle{block} = [rectangle, draw, fill=black!20, text centered, text width=8em, minimum height=2.5em]
+\tikzstyle{line} = [draw, -latex']
+\tikzstyle{cloud} = [draw, ellipse,fill=red!20, node distance=3cm, minimum height=2em]
+\tikzstyle{nocloud} = [ellipse, node distance=3cm, minimum height=0em, minimum width=0em]
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=blue,
+}
+
+\usepackage{amssymb}
+\newcommand{\numberset}{\mathbb}
+\newcommand{\N}{\numberset{N}}
+\newcommand{\R}{\numberset{R}}
+\newcommand{\Z}{\numberset{Z}}
+\newcommand{\Q}{\numberset{Q}}
+\newcommand{\C}{\numberset{C}}
+
+\let\oldemptyset\emptyset
+\let\emptyset\varnothing
+
+\title{\textbf{Laboratorio di Sistemi Operativi}}
+\author{Leonardini Lorenzo - 598608}
+\date{}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{20pt}
+\fancyhead[LE,RO]{Leonardini Lorenzo - 598608}
+\fancyhead[RE,LO]{Laboratorio di Sistemi Operativi}
+\fancyfoot[LE,RO]{\thepage}
+
+\usepackage[nooldvoltagedirection, american]{circuitikz}
+\usepackage{tikz-3dplot}
+
+\usepackage{amsmath}
+\usepackage{cleveref}
+\usepackage[most]{tcolorbox}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+	\includegraphics[width=\textwidth]{chart}
+\end{center}
+
+\end{document}
