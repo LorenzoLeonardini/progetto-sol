@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 
 #include "utils/config.h"
-#include "utils/consts.h"
+#include "utils.h"
 #include "manager.h"
 #include "supermarket.h"
 

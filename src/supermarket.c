@@ -12,10 +12,8 @@
 #include <sys/un.h>
 
 #include "llds/read_write_lock.h"
-#include "utils/errors.h"
 #include "utils/config.h"
-#include "utils/consts.h"
-#include "utils/network.h"
+#include "utils.h"
 
 #include "counter.h"
 #include "guard.h"
@@ -40,42 +38,56 @@ void supermarket_launch() {
 	// Signals interrupt system calls in order to stop waits
 	register_handlers(FALSE);
 
+	srand(time(NULL));
+
 	// Init logger
-	logger_init("asd.txt");
+	logger_init(LOG_FILE);
 	// Init counters
 	create_counters();
 	opened_counters = 0;
-	open_counter();
+	for(int i = 0; i < INITIAL_K; i++) {
+		open_counter();
+	}
 
 	// Init guard
 	pthread_t guard_thread;
 	PTHREAD_CREATE(&guard_thread, NULL, &guard_create, NULL);
 
+	int *message = (int*) malloc(sizeof(int) * (K + 2));
+	message[0] = SO_SUPERMARKET_CONNECTION;
+	int connection = connect_to_manager_server();
+	write(connection, message, sizeof(int));
+
 	// While no signal is received, periodically send the manager info
 	// about counters
+	struct timespec tim = millis_to_timespec(NOTIFY_TIME);
 	while(!sigquit && !sighup) {
-		sleep(3);
+		nanosleep(&tim, NULL);
 		
 		// Send the manager the current queue count for every counter
 		// Retrieve the queue lengths and construct the message
 		// We don't need the read lock, since this is the only thread
 		// capable of writing
 		int length = sizeof(int) * (opened_counters + 2);
-		int *message = (int*) malloc(length);
 		message[0] = SO_COUNTER_QUEUE;
 		message[1] = opened_counters;
 		for(int i = 0; i < opened_counters; i++) {
 			message[2 + i] = counter_queue_length(counters[i]);
 		}
 		// Send the data and get a response
-		int connection = connect_to_manager_server();
 		write(connection, message, length);
 		read(connection, message, sizeof(int) * 2);
-		close(connection);
 		// Process the response
-		assert(message[0] == SO_DESIRED_COUNTERS);
+		if(message[0] != SO_DESIRED_COUNTERS) {
+			// Not necessarily a problem, it could just be the signal
+			SUPERMARKET_ERROR("Expected SO_DESIRED_COUNTERS, not received. Resetting communication.\n");
+			close(connection);
+			connection = connect_to_manager_server();
+			message[0] = SO_SUPERMARKET_CONNECTION;
+			write(connection, message, sizeof(int));
+			continue;
+		}
 		int desired_counters = message[1];
-		free(message);
 
 		SUPERMARKET_LOG("Manager requested %d counters\n", desired_counters);
 
@@ -88,17 +100,19 @@ void supermarket_launch() {
 			rw_lock_done_write(counters_status);
 		}
 	}
+	close(connection);
+	free(message);
 	SUPERMARKET_LOG("Received signal, stopping\n");
 	
 	// From now on it's better not to be interrupted
-	register_handlers(TRUE);
 
 	// TODO: handle
 	if(sigquit) {
-		guard_close(TRUE);
+		guard_close(FALSE);
 	} else if (sighup) {
 		guard_close(TRUE);
 	}
+	register_handlers(TRUE);
 	pthread_join(guard_thread, NULL);
 	SUPERMARKET_LOG("All the customers exited the supermarket\n");
 	SUPERMARKET_LOG("Closing all counters\n");
@@ -155,16 +169,17 @@ static void register_handlers(int restart) {
 		s.sa_flags = SA_RESTART;
 	}
 	sigaction(SIGQUIT, &s, NULL);
+	sigaction(SIGHUP, &s, NULL);
 }
 
 static void free_counters() {
 	SUPERMARKET_LOG("Cleaning up counters\n");
 	for(int i = 0; i < K; i++) {
-		counter_delete(counters[i]);
+		counter_destroy(counters[i]);
 	}
 	free(counters);
 
-	rw_lock_delete(counters_status);
+	rw_lock_destroy(counters_status);
 }
 
 static void create_counters() {

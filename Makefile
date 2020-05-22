@@ -7,28 +7,28 @@ T := $(shell $(MAKE) $(MAKECMDGOALS) --no-print-directory \
 
 N := x
 C = $(words $N)$(eval N := x $N)
-ECHO = echo -e "`expr " [\`expr $C '*' 100 / $T\`" : '.*\(....\)$$'`%]"
+ECHO = echo -e "`expr " [\`expr $C '*' 100 / $T\`" : '.*\(...\)$$'`%]"
 endif
 
 # Defining compiler, flags, object files & socked dirs and useful variables
 CC = gcc
-CFLAGS = -Wall -pedantic -lpthread
+CFLAGS = -Wall -pedantic -lpthread 
 ODIR = objs
 SDIR = sockets
 GREEN = \033[0;32m
 NC = \033[0m
 
 # List all the files needed for each target
-_OBJS = counter.o customer.o guard.o logger.o main.o manager.o supermarket.o utils/config.o utils/network.o
-_LLDS_OBJS = llds/queue.o llds/read_write_lock.o
+_OBJS = counter.o customer.o guard.o logger.o main.o manager.o supermarket.o utils/config.o utils/network.o utils/time.o
+_LLDS_OBJS = llds/hashmap.o llds/queue.o llds/read_write_lock.o
 # Generate final list with object dir
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
 LLDS_OBJS = $(patsubst %,$(ODIR)/%,$(_LLDS_OBJS))
 
 # List all the header files
-HEADERS = src/counter.h src/customer.h src/guard.h src/logger.h src/manager.h src/supermarket.h \
-		  src/utils/config.h src/utils/consts.h src/utils/errors.h src/utils/network.h
-LLDS_HEADERS = src/llds/queue.h src/llds/read_write_lock.h
+HEADERS = src/counter.h src/customer.h src/guard.h src/logger.h src/manager.h src/supermarket.h src/utils.h \
+		  src/utils/config.h src/utils/consts.h src/utils/network.h src/utils/time.h
+LLDS_HEADERS = src/llds/errors.h src/llds/hashmap.h src/llds/queue.h src/llds/read_write_lock.h
 
 .PHONY: all clean
 
@@ -44,6 +44,10 @@ clean:
 	@rm -rf $(SDIR)
 	@echo "Deleting libraries files"
 	@rm -rf *.a
+	@echo "Deleting valgrind files"
+	@rm -rf vgcore*
+	@echo "Deleting log files"
+	@rm -rf test.log exec?.log
 
 # supermercato target
 supermercato: $(OBJS) llds
@@ -78,8 +82,19 @@ test: all
 	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes ./supermercato.out
 
 test1: all
+	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes ./supermercato.out config1.txt & \
+	pid=$$(pgrep memcheck | head -1); \
+	sleep 15; \
+	kill -3 $$pid; \
+	wait $$pid
 
 test2: all
+	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes ./supermercato.out config2.txt & \
+	pid=$$(pgrep memcheck | head -1); \
+	sleep 25; \
+	kill -1 $$pid; \
+	wait $$pid; \
+	./analisi.sh exec2.log
 
 lldstest: lldstest.out
 	valgrind --leak-check=full ./lldstest.out	

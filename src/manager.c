@@ -13,8 +13,7 @@
 #include <sys/wait.h>
 
 #include "utils/config.h"
-#include "utils/consts.h"
-#include "utils/errors.h"
+#include "utils.h"
 
 #include "manager.h"
 
@@ -31,6 +30,7 @@ static void wait_supermarket_close(int supermarket_pid);
 
 void manager_launch(int sup_pid) {
 	supermarket_pid = sup_pid;
+	srand(time(NULL));
 
 	// System Calls should be recovered after interrupt.
 	// Especially important for accepting incoming messages.
@@ -63,6 +63,7 @@ static void close_connections() {
 
 static void gestore(int signum) {
 	if(signum == SIGQUIT || signum == SIGHUP) {
+//		write(0, "\t---- Manager received signal - forwarding ----\n", sizeof(char) * 49);
 		kill(supermarket_pid, signum);
 	}
 }
@@ -75,6 +76,7 @@ static void register_handlers(int restart) {
 		s.sa_flags = SA_RESTART;
 	}
 	sigaction(SIGQUIT, &s, NULL);
+	sigaction(SIGHUP, &s, NULL);
 }
 
 static void start_socket() {
@@ -108,65 +110,62 @@ static int args_to_fd(void *args) {
 
 static void *customer_request_exit(void *args) {
 	int connection = args_to_fd(args);
-	int customer_id, n_bytes;
-	n_bytes = read(connection, &customer_id, sizeof(int));
-	if(n_bytes == -1) {
-		perror("[Manager] Getting customer id");
-		MANAGER_ERROR("Received comunication from a unidentified customer\n");
-		return NULL;
-	} else if(n_bytes == 0) {
-		MANAGER_ERROR("Connection with customer ended abruptly\n");
-		return NULL;
-	}
+	int customer_id;
+	MANAGER_SOCKET_READ(connection, &customer_id, sizeof(int),
+			"[Manager] Getting customer id",
+			"Received communication from an unidentified customer", NULL)
+	MANAGER_LOG("Granting customer %d permission to exit\n", customer_id);
 	int response[2] = { SO_CUSTOMER_GRANT_EXIT, customer_id };
 	write(connection, response, sizeof(int) * 2);
 	close(connection);
 	return NULL;
 }
 
-static void *queue_status(void *args) {
-	int connection = args_to_fd(args);
-	int counters_count, n_bytes;
-	n_bytes = read(connection, &counters_count, sizeof(int));
-	if(n_bytes == -1) {
-		perror("[Manager] Getting open counters count");
-		MANAGER_ERROR("Received wrong comunication about counters status\n");
-		return NULL;
-	} else if(n_bytes == 0) {
-		MANAGER_ERROR("Connection with supermarket ended abruptly\n");
-		return NULL;
-	}
+static void queue_status(int connection) {
+	int counters_count;
+	MANAGER_SOCKET_READ(connection, &counters_count, sizeof(int),
+			"[Manager] Getting open counters count", 
+			"Received wrong comunication about counters status", );
 	assert(counters_count > 0);
 	int *queues = (int*) malloc(sizeof(int) * counters_count);
-	n_bytes = read(connection, queues, sizeof(int) * counters_count);
-	if(n_bytes == -1) {
-		perror("[Manager] Getting open counters count");
-		MANAGER_ERROR("Received wrong comunication about counters status\n");
-		return NULL;
-	} else if(n_bytes == 0) {
-		MANAGER_ERROR("Connection with supermarket ended abruptly\n");
-		return NULL;
-	}
-	MANAGER_LOG("Received counters status from supermarket\n");
+	MANAGER_SOCKET_READ(connection, queues, sizeof(int) * counters_count,
+			"[Manager] Getting open counters count",
+			"Received wrong comunication about counters status", );
+	MANAGER_LOG("Received queues status from supermarket\n");
+	int count_one = 0;
+	int count_max = 0;
 	for(int i = 0; i < counters_count; i++) {
+		if(queues[i] <= 1) count_one++;
+		if(queues[i] >= S2) count_max++;
 		printf("\tCounter %d: %d customers\n", i, queues[i]);
 	}
-	int message[2] = { SO_DESIRED_COUNTERS, rand() % K + 1 };
+	int to_request = counters_count;
+	if(count_one >= S1 && count_max == 0) to_request--;
+	else if(count_one < S1 && count_max > 0) to_request++;
+	int message[2] = { SO_DESIRED_COUNTERS, to_request };
 	write(connection, message, sizeof(int) * 2);
 	free(queues);
+}
+
+static void *supermarket_connection(void *args) {
+	int connection = args_to_fd(args);
+	int bytes, message;
+	while((bytes = read(connection, &message, sizeof(int))) > 0) {
+		if(message == SO_COUNTER_QUEUE) {
+			queue_status(connection);
+		} else {
+			MANAGER_ERROR("Received undefined message via supermarket socket");
+		}
+	}
+	MANAGER_LOG("Closed connection with supermarket\n");
 	return NULL;
 }
 
 static void handle_connection(int connection) {
-	int type = 0, n_bytes = 0;
-	n_bytes = read(connection, &type, sizeof(int));
-	if(n_bytes == -1) {
-		perror("[Manager] Getting connection type");
-		MANAGER_ERROR("Error while trying to get connection type");
-		return;
-	} else if(n_bytes == 0) {
-		MANAGER_ERROR("Connection with client ended abruptly\n");
-	}
+	int type = 0;
+	MANAGER_SOCKET_READ(connection, &type, sizeof(int),
+			"[Manager] Getting connection type",
+			"Error while trying to get connection type", )
 
 	pthread_t thread;
 	switch(type) {
@@ -177,8 +176,8 @@ static void handle_connection(int connection) {
 		case SO_CUSTOMER_REQUEST_EXIT:
 			PTHREAD_CREATE(&thread, NULL, customer_request_exit, fd_to_args(connection));
 			break;
-		case SO_COUNTER_QUEUE:
-			PTHREAD_CREATE(&thread, NULL, queue_status, fd_to_args(connection));
+		case SO_SUPERMARKET_CONNECTION:
+			PTHREAD_CREATE(&thread, NULL, supermarket_connection, fd_to_args(connection));
 			break;
 		default:
 			MANAGER_ERROR("Unkown connection type (%d). Killing...\n", type);

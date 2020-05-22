@@ -1,38 +1,37 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <assert.h>
 #include <errno.h>
 #include <pthread.h>
 #include <sys/time.h>
 
 #include "llds/queue.h"
-#include "utils/consts.h"
-#include "utils/errors.h"
+#include "utils.h"
 #include "customer.h"
 
 #include "counter.h"
 
 static void counter_close(counter_t counter);
 
-counter_t counter_create(int id) {
+counter_t counter_create(unsigned int id) {
 	counter_t counter = (counter_t) malloc(sizeof(counter_struct_t));
 	counter->id = id;
 	counter->queue = queue_create();
 	counter->status = CLOSED;
+
+	counter->time_for_customer = rand() % 61 + 20;
+
 	counter->tot_customers = 0;
 	counter->tot_products = 0;
-	counter->open_count = 0;
+
+	counter->opening_count = 0;
 	counter->open_timestamp = 0;
 	counter->open_time = queue_create();
+
 	PTHREAD_MUTEX_INIT_ERR(&counter->mtx, NULL);
 	PTHREAD_COND_INIT_ERR(&counter->idle, NULL);
 	return counter;
-}
-
-void counter_change_status(counter_t counter, status_t status) {
-	PTHREAD_MUTEX_LOCK(&counter->mtx);
-	counter->status = status;
-	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 }
 
 void counter_add_customer(counter_t counter, customer_t customer) {
@@ -68,36 +67,32 @@ void *counter_thread_fnc(void *args) {
 	return NULL;
 }
 
-int counter_queue_length(counter_t counter) {
+unsigned int counter_queue_length(counter_t counter) {
 	PTHREAD_MUTEX_LOCK(&counter->mtx);
-	int value = counter->queue->size;
+	unsigned int value = counter->queue->size;
 	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 	return value;
 }
 
 void counter_open(counter_t counter) {
 	PTHREAD_MUTEX_LOCK(&counter->mtx);
+	assert(counter->status != OPEN && counter->open_timestamp == 0);
 
-	// Get opening time
-	struct timeval start;
-	gettimeofday(&start, NULL);
-	unsigned long long millis = (start.tv_sec * 1000000 + start.tv_usec) / 1000;
 	counter->status = OPEN;
-	counter->open_timestamp = millis;
+	counter->open_timestamp = current_time_millis();
 
+	PTHREAD_COND_SIGNAL(&counter->idle);
 	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 }
 
+// It's a local function, the lock is already acquired by the caller
 static void counter_close(counter_t counter) {
-	// Get close time
-	struct timeval stop;
-	gettimeofday(&stop, NULL);
-	unsigned long long millis = (stop.tv_sec * 1000000 + stop.tv_usec) / 1000;
-	counter->open_count++;
-	// Calculate open time and save into list
-	unsigned long long *t = (unsigned long long*) malloc(sizeof(unsigned long long));
-	*t = millis - counter->open_timestamp;
+	// Save open time details
+	counter->opening_count++;
+	msec_t *t = (msec_t*) malloc(sizeof(msec_t));
+	*t = current_time_millis() - counter->open_timestamp;
 	queue_add(counter->open_time, (void*) t);
+
 	// Change status
 	counter->status = CLOSED;
 	counter->open_timestamp = 0;
@@ -111,12 +106,15 @@ static void counter_close(counter_t counter) {
 	SUPERMARKET_LOG("Counter %d has been closed\n", counter->id);
 }
 
-void counter_delete(counter_t counter) {
+void counter_destroy(counter_t counter) {
 	PTHREAD_MUTEX_DESTROY_ERR(&counter->mtx);
 	PTHREAD_COND_DESTROY_ERR(&counter->idle);
-	queue_delete(counter->queue);
-	queue_delete(counter->open_time);
+
+	queue_destroy(counter->queue);
+	queue_destroy(counter->open_time);
+
 	if(counter->open_timestamp != 0)
 		SUPERMARKET_ERROR("Counter %d hasn't been saved\n", counter->id);
+
 	free(counter);
 }
