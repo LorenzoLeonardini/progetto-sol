@@ -4,6 +4,6 @@
 typedef unsigned long long msec_t;
 
 msec_t current_time_millis();
-struct timespec millis_to_timespec(int millis);
+struct timespec millis_to_timespec(msec_t millis);
 
 #endif

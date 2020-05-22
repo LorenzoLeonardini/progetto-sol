@@ -8,7 +8,6 @@
 #define COMPARE(x) if(x == -1 && strcmp(line, #x) == 0) x = number;
 #define COMPARE_STR(x) if(x[0] == '\0' && strcmp(line, #x) == 0) \
 	strncpy(x, line + index, 99);
-	
 
 int K = -1, C = -1, E = -1, T = -1, P = -1, INITIAL_K = -1, PRODUCT_TIME = -1,
 	NOTIFY_TIME = -1, S = -1, S1 = -1, S2 = -1;
@@ -39,24 +38,38 @@ static void read_config_file(char *file) {
 		perror("Open config file");
 		exit(EXIT_FAILURE);
 	}
-	
+
 	// Prepare data to read line
 	short max_line_length = 100;
 	char *line = (char*) malloc(sizeof(char) * max_line_length);
-	size_t size = sizeof(char) * (max_line_length - 1);
+	size_t size = sizeof(char) * (max_line_length);
 
 	// Read line by line
-	while(getline(&line, &size, file_fd) > 0) {
+	int len;
+	while((len = getline(&line, &size, file_fd)) > 0) {
+		// This should be called if line was too large for buffer and couldn't
+		// fit completely.
+		if(len >= 99) {
+			free(line);
+			fclose(file_fd);
+			fprintf(stderr, "config file has too long line\n");
+			exit(EXIT_FAILURE);
+		}
+
 		int index = -1;
+		// Search ':' inside line and save its index
 		for(int i = 0; i < 100 && index == -1; i++) {
 			if(line[i] == ':')
 				index = i;
 			if(line[i] == '\0') break;
 		}
+		// There was no ':'
 		if(index == -1) {
 			fprintf(stderr, "WARNING: Invalid config line\n\t%s\n", line);
 			continue;
 		}
+		// Replacing ':' with '\0', so that "line" contains var name and
+		// "line + index" contains the value
 		line[index++] = '\0';
 		int number = atoi(line + index);
 		// This removes the final \n and replace it with \0
@@ -78,9 +91,9 @@ static void read_config_file(char *file) {
 
 	free(line);
 	fclose(file_fd);
-	
+
 	// Check if all necessary data is provided
-	if(K == -1 || C == -1 || E == -1 || T == -1 || P == -1 || INITIAL_K == -1 
+	if(K == -1 || C == -1 || E == -1 || T == -1 || P == -1 || INITIAL_K == -1
 			|| LOG_FILE[0] == '\0' || PRODUCT_TIME == -1 || NOTIFY_TIME == -1
 			|| S == -1 || S1 == - 1 || S2 == - 1) {
 		fprintf(stderr, "Not all parameters were provided in config file\n");
