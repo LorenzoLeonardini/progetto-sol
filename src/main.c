@@ -5,15 +5,12 @@
 #include <sys/stat.h>
 
 #include "utils/config.h"
-#include "utils.h"
 #include "manager.h"
 #include "supermarket.h"
 
-// The main function just starts the program. At first reads the config file
-// and then launches the manager and the supermarket in a child process
 int main(int argc, char **argv) {
 	read_config(argc, argv);
-	
+
 	// Create sockets folder
 	struct stat st = {0};
 	if(stat("./sockets", &st) == -1) {
