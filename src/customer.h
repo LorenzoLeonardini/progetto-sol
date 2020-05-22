@@ -6,7 +6,11 @@ typedef struct {
 	int shopping_time;
 	int products;
 	int current_queue;
+	int visited_queues;
+	msec_t queue_time; 
 	short being_served;
+	short served;
+	pthread_mutex_t mtx;
 	pthread_cond_t waiting_in_line;
 } customer_struct_t;
 typedef customer_struct_t *customer_t;

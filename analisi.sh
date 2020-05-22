@@ -89,7 +89,7 @@ print_customer() {
 print_counter() {
 	if [[ ! ${counter['id']} == -1 ]]; then
 		if [[ ! ${counter['n_close']} == "0" ]]; then
-			counter['t_avg']=$((${counter['t_cust']} / ${counter['n_close']}))
+			counter['t_avg']=$((${counter['t_cust']} / ${counter['n_customer']}))
 		else
 			counter['t_avg']=${counter['t_cust']}
 		fi
@@ -103,6 +103,7 @@ print_counter() {
 			>&4
 		counter['id']=-1
 		counter['t_tot']=0
+		counter['t_cust']=0
 	fi
 }
 

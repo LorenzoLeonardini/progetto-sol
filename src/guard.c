@@ -49,6 +49,8 @@ void *guard_create(void *attr) {
 		}
 	}
 
+	// Send every customer a signal to interrupt every sleep and exit the
+	// supermarket
 	if(!should_gentle_close) {
 		SUPERMARKET_LOG("Forcing every customer to exit\n");
 		queue_t threads = hashmap_to_queue(customer_threads);

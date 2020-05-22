@@ -4,10 +4,12 @@
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
+#include <unistd.h>
 #include <sys/time.h>
 
 #include "llds/queue.h"
 #include "utils.h"
+#include "utils/config.h"
 #include "customer.h"
 
 #include "counter.h"
@@ -28,6 +30,7 @@ counter_t counter_create(unsigned int id) {
 	counter->opening_count = 0;
 	counter->open_timestamp = 0;
 	counter->open_time = queue_create();
+	counter->client_time = queue_create();
 
 	PTHREAD_MUTEX_INIT_ERR(&counter->mtx, NULL);
 	PTHREAD_COND_INIT_ERR(&counter->idle, NULL);
@@ -47,22 +50,55 @@ void counter_add_customer(counter_t counter, customer_t customer) {
 }
 
 void *counter_thread_fnc(void *args) {
-	pthread_detach(pthread_self());
 	counter_t counter = (counter_t) args;
 	PTHREAD_MUTEX_LOCK(&counter->mtx);
-	while(counter->status != GO_HOME) {
-		while(counter->status == OPEN || counter->status == CLOSED) {
+	counter->open_timestamp = current_time_millis();
+	counter->status = OPEN;
+	while(counter->status != CLOSED) {
+		while(counter->status == OPEN && counter->queue->size == 0) {
 			PTHREAD_COND_WAIT(&counter->idle, &counter->mtx);
 		}
 		if(counter->status == CLOSING) {
 			counter_close(counter);
 			PTHREAD_COND_SIGNAL(&counter->idle);
 		}
+		if(counter->status == OPEN) {
+			customer_t current = queue_pop(counter->queue);
+			PTHREAD_MUTEX_UNLOCK(&counter->mtx);
+			PTHREAD_MUTEX_LOCK(&current->mtx);
+			msec_t start = current_time_millis();
+			current->being_served = 1;
+			current->queue_time = current_time_millis() - current->queue_time;
+			int prods = current->products;
+			PTHREAD_MUTEX_UNLOCK(&current->mtx);
+			counter->tot_customers++;
+			counter->tot_products += prods;
+
+			struct timespec tim = millis_to_timespec(
+					counter->time_for_customer + prods * PRODUCT_TIME);
+			int ret = nanosleep(&tim, &tim);
+			if(ret == -1) {
+				if(errno != EINTR) {
+					perror("Customer paying");
+					SUPERMARKET_ERROR("Counter [%u] haven't waited %lu.%lu and "
+							"wasn't stopped by signal\n", counter->id, tim.tv_sec, 
+							tim.tv_nsec);
+					exit(EXIT_FAILURE);
+				}
+			}
+
+			PTHREAD_MUTEX_LOCK(&current->mtx);
+			current->served = 1;
+			current->current_queue = -1;
+			msec_t *t = (msec_t*) malloc(sizeof(msec_t));
+			*t = current_time_millis() - start;
+			queue_add(counter->client_time, t);
+
+			PTHREAD_COND_SIGNAL(&current->waiting_in_line);
+			PTHREAD_MUTEX_UNLOCK(&current->mtx);
+			PTHREAD_MUTEX_LOCK(&counter->mtx);
+		}
 	}
-	counter->status = WENT_HOME;
-	PTHREAD_COND_SIGNAL(&counter->idle);
-	SUPERMARKET_LOG("Cashier %d went home\n", counter->id);
-	fflush(stdout);
 	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 	return NULL;
 }
@@ -74,24 +110,13 @@ unsigned int counter_queue_length(counter_t counter) {
 	return value;
 }
 
-void counter_open(counter_t counter) {
-	PTHREAD_MUTEX_LOCK(&counter->mtx);
-	assert(counter->status != OPEN && counter->open_timestamp == 0);
-
-	counter->status = OPEN;
-	counter->open_timestamp = current_time_millis();
-
-	PTHREAD_COND_SIGNAL(&counter->idle);
-	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
-}
-
 // It's a local function, the lock is already acquired by the caller
 static void counter_close(counter_t counter) {
 	// Save open time details
 	counter->opening_count++;
 	msec_t *t = (msec_t*) malloc(sizeof(msec_t));
 	*t = current_time_millis() - counter->open_timestamp;
-	queue_add(counter->open_time, (void*) t);
+	queue_add(counter->open_time, t);
 
 	// Change status
 	counter->status = CLOSED;
@@ -100,7 +125,6 @@ static void counter_close(counter_t counter) {
 	customer_t customer;
 	while((customer = queue_pop(counter->queue)) != NULL) {
 		customer->current_queue = -1;
-		// TODO: signal the customer
 	}
 
 	SUPERMARKET_LOG("Counter %d has been closed\n", counter->id);
@@ -112,6 +136,7 @@ void counter_destroy(counter_t counter) {
 
 	queue_destroy(counter->queue);
 	queue_destroy(counter->open_time);
+	queue_destroy(counter->client_time);
 
 	if(counter->open_timestamp != 0)
 		SUPERMARKET_ERROR("Counter %d hasn't been saved\n", counter->id);

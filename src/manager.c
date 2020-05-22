@@ -142,6 +142,8 @@ static void queue_status(int connection) {
 	int to_request = counters_count;
 	if(count_one >= S1 && count_max == 0) to_request--;
 	else if(count_one < S1 && count_max > 0) to_request++;
+	if(to_request < 1) to_request = 1;
+	else if(to_request > K) to_request = K;
 	int message[2] = { SO_DESIRED_COUNTERS, to_request };
 	write(connection, message, sizeof(int) * 2);
 	free(queues);

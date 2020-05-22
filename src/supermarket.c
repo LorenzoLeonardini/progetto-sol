@@ -76,7 +76,10 @@ void supermarket_launch() {
 		}
 		// Send the data and get a response
 		write(connection, message, length);
-		read(connection, message, sizeof(int) * 2);
+		int bytes;
+		do {
+			bytes = read(connection, message, sizeof(int) * 2);
+		} while(bytes == -1 && errno == EINTR);
 		// Process the response
 		if(message[0] != SO_DESIRED_COUNTERS) {
 			// Not necessarily a problem, it could just be the signal
@@ -108,6 +111,8 @@ void supermarket_launch() {
 
 	// TODO: handle
 	if(sigquit) {
+		while(opened_counters > 0)
+			close_counter();
 		guard_close(FALSE);
 	} else if (sighup) {
 		guard_close(TRUE);
@@ -118,19 +123,6 @@ void supermarket_launch() {
 	SUPERMARKET_LOG("Closing all counters\n");
 	while(opened_counters > 0)
 		close_counter();
-	for(int i = 0; i < K; i++) {
-		counter_t closing = counters[i];
-		PTHREAD_MUTEX_LOCK(&closing->mtx);
-		while(closing->status != CLOSED) {
-			PTHREAD_COND_SIGNAL(&closing->idle);
-			PTHREAD_COND_WAIT(&closing->idle, &closing->mtx);
-		}
-		closing->status = GO_HOME;
-		PTHREAD_COND_SIGNAL(&closing->idle);
-		while(closing->status != WENT_HOME)
-			PTHREAD_COND_WAIT(&closing->idle, &closing->mtx);
-		PTHREAD_MUTEX_UNLOCK(&closing->mtx);
-	}
 	SUPERMARKET_LOG("All counters closed\n");
 
 	// Comunicate the manager every customer exited and it can stop listening
@@ -184,19 +176,16 @@ static void free_counters() {
 
 static void create_counters() {
 	counters_status = rw_lock_create();
-
-	pthread_t thread;
 	counters = (counter_t*) malloc(sizeof(counter_t) * K);
 	for(int i = 0; i < K; i++) {
 		counters[i] = counter_create(i);
-		PTHREAD_CREATE(&thread, NULL, counter_thread_fnc, counters[i]);
 	}
 	atexit(free_counters);
 }
 
 static void open_counter() {
-	counter_open(counters[opened_counters]);
-	PTHREAD_COND_SIGNAL(&counters[opened_counters]->idle);
+	PTHREAD_CREATE(&counters[opened_counters]->thread, NULL, 
+			counter_thread_fnc, counters[opened_counters]);
 	opened_counters++;
 }
 
@@ -208,4 +197,5 @@ static void close_counter() {
 	closing->status = CLOSING;
 	PTHREAD_COND_SIGNAL(&closing->idle);
 	PTHREAD_MUTEX_UNLOCK(&closing->mtx);
+	pthread_join(closing->thread, NULL);
 }

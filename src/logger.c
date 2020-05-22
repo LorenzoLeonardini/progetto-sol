@@ -72,9 +72,9 @@ void logger_log_customer_data(customer_t customer) {
 
 	dprintf(file, "%u:\n", customer->id);
 	dprintf(file, "\tTEMPO NEL SUPERMERCATO: %d\n", customer->shopping_time + customer->products * 30);
-	dprintf(file, "\tTEMPO IN CODA: %d\n", customer->products * 30);
+	dprintf(file, "\tTEMPO IN CODA: %llu\n", customer->queue_time);
 	dprintf(file, "\tNUMERO PRODOTTI: %d\n", customer->products);
-	dprintf(file, "\tNUMERO CAMBI CODA: %d\n", 0);
+	dprintf(file, "\tNUMERO CAMBI CODA: %d\n", customer->visited_queues);
 
 	PTHREAD_MUTEX_UNLOCK(&mutex);
 }
@@ -93,13 +93,17 @@ void logger_log_counter_data(counter_t counter) {
 		current_mode = COUNTERS;
 	}
 
+	msec_t *t;
 	dprintf(file, "%d:\n", counter->id);
 	dprintf(file, "\tNUMERO CLIENTI: %d\n", counter->tot_customers);
 	dprintf(file, "\tTEMPO CLIENTI:\n");
+	while((t = (msec_t*) queue_pop(counter->client_time)) != NULL) {
+		dprintf(file, "\t\t%llu\n", *t);
+		free(t);
+	}
 	dprintf(file, "\tNUMERO PRODOTTI: %d\n", counter->tot_products);
 	dprintf(file, "\tNUMERO CHIUSURE: %d\n", counter->opening_count);
 	dprintf(file, "\tAPERTURE:\n");
-	msec_t *t;
 	while((t = (msec_t*) queue_pop(counter->open_time)) != NULL) {
 		dprintf(file, "\t\t%llu\n", *t);
 		free(t);
