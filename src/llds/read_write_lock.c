@@ -8,12 +8,17 @@
 
 #include "read_write_lock.h"
 
+/**
+ * Code structure took from "Operating Systems - Principles & Practice",
+ * 												T. Anderson, M. Dahlin
+ */
+
 static int rw_lock_read_should_wait(rw_lock_t rw_lock);
 static int rw_lock_write_should_wait(rw_lock_t rw_lock);
 
 rw_lock_t rw_lock_create() {
 	rw_lock_t rw_lock = (rw_lock_t) malloc(sizeof(rw_lock_struct_t));
-	
+
 	rw_lock->active_readers = 0;
 	rw_lock->active_writers = 0;
 	rw_lock->waiting_readers = 0;
@@ -35,18 +40,18 @@ void rw_lock_start_read(rw_lock_t rw_lock) {
 	}
 	rw_lock->waiting_readers--;
 	rw_lock->active_readers++;
-	
+
 	PTHREAD_MUTEX_UNLOCK(&rw_lock->mtx);
 }
 
-void rw_lock_done_read(rw_lock_t rw_lock) {
+void rw_lock_stop_read(rw_lock_t rw_lock) {
 	PTHREAD_MUTEX_LOCK(&rw_lock->mtx);
 
 	rw_lock->active_readers--;
 	if(rw_lock->active_readers == 0 && rw_lock->waiting_writers > 0) {
 		PTHREAD_COND_SIGNAL(&rw_lock->write_go);
 	}
-	
+
 	PTHREAD_MUTEX_UNLOCK(&rw_lock->mtx);
 }
 
@@ -63,7 +68,7 @@ void rw_lock_start_write(rw_lock_t rw_lock) {
 	PTHREAD_MUTEX_UNLOCK(&rw_lock->mtx);
 }
 
-void rw_lock_done_write(rw_lock_t rw_lock) {
+void rw_lock_stop_write(rw_lock_t rw_lock) {
 	PTHREAD_MUTEX_LOCK(&rw_lock->mtx);
 
 	rw_lock->active_writers--;
@@ -97,4 +102,3 @@ static int rw_lock_write_should_wait(rw_lock_t rw_lock) {
 	}
 	return 0;
 }
-

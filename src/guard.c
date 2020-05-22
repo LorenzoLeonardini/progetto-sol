@@ -55,7 +55,7 @@ void *guard_create(void *attr) {
 		SUPERMARKET_LOG("Forcing every customer to exit\n");
 		queue_t threads = hashmap_to_queue(customer_threads);
 		pthread_t *thread;
-		while((thread = queue_pop(threads)) != NULL) {
+		while((thread = queue_dequeue(threads)) != NULL) {
 			pthread_kill(*thread, SIGUSR1);
 		}
 		queue_destroy(threads);

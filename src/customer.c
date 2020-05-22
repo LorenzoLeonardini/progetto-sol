@@ -139,17 +139,17 @@ static void customer_ask_permission(customer_t customer) {
 static int customer_enqueue(customer_t customer) {
 	rw_lock_start_read(counters_status);
 	if(opened_counters == 0) {
-		rw_lock_done_read(counters_status);
+		rw_lock_stop_read(counters_status);
 		return -1;
 	}
 	int counter = rand() % opened_counters;
 	PTHREAD_MUTEX_LOCK(&counters[counter]->mtx);
-	queue_add(counters[counter]->queue, customer);
+	queue_enqueue(counters[counter]->queue, customer);
 	PTHREAD_COND_SIGNAL(&counters[counter]->idle);
 	PTHREAD_MUTEX_UNLOCK(&counters[counter]->mtx);
 	customer->current_queue = counter;
 	customer->visited_queues++;
-	rw_lock_done_read(counters_status);
+	rw_lock_stop_read(counters_status);
 	return customer->current_queue;
 }
 

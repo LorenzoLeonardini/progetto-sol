@@ -20,11 +20,11 @@ int main(void) {
 	n3->value = 3;
 	n4->value = 4;
 	n5->value = 5;
-	queue_add(queue, n1);
-	queue_add(queue, n2);
-	queue_add(queue, n3);
-	queue_add(queue, n4);
-	queue_add(queue, n5);
+	queue_enqueue(queue, n1);
+	queue_enqueue(queue, n2);
+	queue_enqueue(queue, n3);
+	queue_enqueue(queue, n4);
+	queue_enqueue(queue, n5);
 
 	number *curr;
 	curr = (number*) queue_head(queue);
@@ -32,7 +32,7 @@ int main(void) {
 	curr = (number*) queue_tail(queue);
 	printf("TAIL %d\n", curr->value);
 	queue_remove(queue, n3);
-	while((curr = queue_pop(queue)) != NULL) {
+	while((curr = queue_dequeue(queue)) != NULL) {
 		printf("QUEUE (%d): %d\n", queue->size, curr->value);
 	}
 

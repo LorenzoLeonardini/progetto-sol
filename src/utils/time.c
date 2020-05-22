@@ -15,8 +15,9 @@ msec_t current_time_millis() {
 
 struct timespec millis_to_timespec(int millis) {
 	struct timespec tim;
-	tim.tv_nsec = millis * 1000000L;
-	tim.tv_sec  = tim.tv_nsec / 1000000000L;
-	tim.tv_nsec = tim.tv_nsec % 1000000000L;
+	unsigned long long useconds = millis;
+	useconds *= 1000000L;
+	tim.tv_sec  = useconds / 1000000000L;
+	tim.tv_nsec = useconds % 1000000000L;
 	return tim;
 }

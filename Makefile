@@ -7,12 +7,13 @@ T := $(shell $(MAKE) $(MAKECMDGOALS) --no-print-directory \
 
 N := x
 C = $(words $N)$(eval N := x $N)
-ECHO = echo -e "`expr " [\`expr $C '*' 100 / $T\`" : '.*\(...\)$$'`%]"
+ECHO = echo -e "`expr "  [\`expr $C '*' 100 / $T\`" : '.*\(....\)$$'`%]"
 endif
 
 # Defining compiler, flags, object files & socked dirs and useful variables
+SHELL = bash
 CC = gcc
-CFLAGS = -Wall -pedantic -lpthread 
+CFLAGS = -Wall -pedantic -pthread 
 ODIR = objs
 SDIR = sockets
 GREEN = \033[0;32m

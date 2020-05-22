@@ -97,14 +97,14 @@ void logger_log_counter_data(counter_t counter) {
 	dprintf(file, "%d:\n", counter->id);
 	dprintf(file, "\tNUMERO CLIENTI: %d\n", counter->tot_customers);
 	dprintf(file, "\tTEMPO CLIENTI:\n");
-	while((t = (msec_t*) queue_pop(counter->client_time)) != NULL) {
+	while((t = (msec_t*) queue_dequeue(counter->client_time)) != NULL) {
 		dprintf(file, "\t\t%llu\n", *t);
 		free(t);
 	}
 	dprintf(file, "\tNUMERO PRODOTTI: %d\n", counter->tot_products);
 	dprintf(file, "\tNUMERO CHIUSURE: %d\n", counter->opening_count);
 	dprintf(file, "\tAPERTURE:\n");
-	while((t = (msec_t*) queue_pop(counter->open_time)) != NULL) {
+	while((t = (msec_t*) queue_dequeue(counter->open_time)) != NULL) {
 		dprintf(file, "\t\t%llu\n", *t);
 		free(t);
 	}

@@ -1,8 +1,10 @@
-*.out
 objs/
 sockets/
+tmp/
 .wakatime-project
-lib*.a
+*.out
 asd.txt
-tags
+exec?.log
+lib*.a
 lorenzo_leonardini-CorsoA.tar.gz
+tags

@@ -100,7 +100,7 @@ void supermarket_launch() {
 				open_counter();
 			while(opened_counters > desired_counters)
 				close_counter();
-			rw_lock_done_write(counters_status);
+			rw_lock_stop_write(counters_status);
 		}
 	}
 	close(connection);

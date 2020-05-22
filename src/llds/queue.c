@@ -2,7 +2,7 @@
 
 #include "queue.h"
 
-static int compare_pointer(void *a, void *b);
+static int compare_pointer(const void *a, const void *b);
 
 queue_t queue_create() {
 	queue_t queue = (queue_t) malloc(sizeof(queue_struct_t));
@@ -12,21 +12,21 @@ queue_t queue_create() {
 	return queue;
 }
 
-void *queue_head(queue_t queue) {
+void *queue_head(const queue_t queue) {
 	if(queue->head != NULL) {
 		return queue->head->element;
 	}
 	return NULL;
 }
 
-void *queue_tail(queue_t queue) {
+void *queue_tail(const queue_t queue) {
 	if(queue->tail != NULL) {
 		return queue->tail->element;
 	}
 	return NULL;
 }
 
-void queue_add(queue_t queue, void *element) {
+void queue_enqueue(queue_t queue, void *element) {
 	queue_element_t *qe = (queue_element_t*) malloc(sizeof(queue_element_t));
 	qe->element = element;
 	qe->next = NULL;
@@ -42,7 +42,7 @@ void queue_add(queue_t queue, void *element) {
 	queue->size++;
 }
 
-void *queue_pop(queue_t queue) {
+void *queue_dequeue(queue_t queue) {
 	if(queue->head != NULL) {
 		// Empty memory, make next element as new head and return value
 		queue_element_t *next = queue->head->next;
@@ -58,16 +58,18 @@ void *queue_pop(queue_t queue) {
 	return NULL;
 }
 
-void *queue_remove(queue_t queue, void *element) {
+void *queue_remove(queue_t queue, const void *element) {
 	return queue_remove_cmp(queue, element, compare_pointer);
 }
 
-void *queue_remove_cmp(queue_t queue, void *element, int (*cmp)(void*, void*)) {
+void *queue_remove_cmp(queue_t queue, const void *element,
+	int (*cmp)(const void*, const void*)) {
+
 	int index = 0;
 	if(queue->head == NULL) return NULL;
 	if(cmp(queue->head->element, element) == 0) {
 		// If item to be removed is head we can use pop
-		return queue_pop(queue);
+		return queue_dequeue(queue);
 	}
 	queue_element_t *current = queue->head;
 	while(current->next != NULL) {
@@ -90,7 +92,7 @@ void *queue_remove_cmp(queue_t queue, void *element, int (*cmp)(void*, void*)) {
 
 void queue_remove_all(queue_t queue) {
 	while(queue->head != NULL) {
-		queue_pop(queue);
+		queue_dequeue(queue);
 	}
 }
 
@@ -101,7 +103,7 @@ void queue_destroy(queue_t queue) {
 	free(queue);
 }
 
-static int compare_pointer(void *a, void *b) {
+static int compare_pointer(const void *a, const void *b) {
 	if(a < b) return -1;
 	if(a > b) return 1;
 	return 0;

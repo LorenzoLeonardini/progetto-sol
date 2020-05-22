@@ -43,7 +43,7 @@ void counter_add_customer(counter_t counter, customer_t customer) {
 	if(counter->status != OPEN) {
 		SUPERMARKET_ERROR("Trying to add a client to a closed counter\n");
 	} else {
-		queue_add(counter->queue, customer);
+		queue_enqueue(counter->queue, customer);
 	}
 	
 	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
@@ -63,7 +63,7 @@ void *counter_thread_fnc(void *args) {
 			PTHREAD_COND_SIGNAL(&counter->idle);
 		}
 		if(counter->status == OPEN) {
-			customer_t current = queue_pop(counter->queue);
+			customer_t current = queue_dequeue(counter->queue);
 			PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 			PTHREAD_MUTEX_LOCK(&current->mtx);
 			msec_t start = current_time_millis();
@@ -92,7 +92,7 @@ void *counter_thread_fnc(void *args) {
 			current->current_queue = -1;
 			msec_t *t = (msec_t*) malloc(sizeof(msec_t));
 			*t = current_time_millis() - start;
-			queue_add(counter->client_time, t);
+			queue_enqueue(counter->client_time, t);
 
 			PTHREAD_COND_SIGNAL(&current->waiting_in_line);
 			PTHREAD_MUTEX_UNLOCK(&current->mtx);
@@ -116,14 +116,14 @@ static void counter_close(counter_t counter) {
 	counter->opening_count++;
 	msec_t *t = (msec_t*) malloc(sizeof(msec_t));
 	*t = current_time_millis() - counter->open_timestamp;
-	queue_add(counter->open_time, t);
+	queue_enqueue(counter->open_time, t);
 
 	// Change status
 	counter->status = CLOSED;
 	counter->open_timestamp = 0;
 
 	customer_t customer;
-	while((customer = queue_pop(counter->queue)) != NULL) {
+	while((customer = queue_dequeue(counter->queue)) != NULL) {
 		customer->current_queue = -1;
 	}
 

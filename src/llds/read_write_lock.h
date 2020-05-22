@@ -15,9 +15,9 @@ typedef rw_lock_struct_t *rw_lock_t;
 
 rw_lock_t rw_lock_create();
 void rw_lock_start_read(rw_lock_t rw_lock);
-void rw_lock_done_read(rw_lock_t rw_lock);
+void rw_lock_stop_read(rw_lock_t rw_lock);
 void rw_lock_start_write(rw_lock_t rw_lock);
-void rw_lock_done_write(rw_lock_t rw_lock);
+void rw_lock_stop_write(rw_lock_t rw_lock);
 void rw_lock_destroy(rw_lock_t rw_lock);
 
 #endif

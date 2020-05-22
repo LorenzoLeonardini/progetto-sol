@@ -16,11 +16,11 @@ typedef struct {
 
 typedef hashmap_struct_t *hashmap_t;
 
-hashmap_t hashmap_create(int size);
-void hashmap_add(hashmap_t hashmap, int key, void *element);
-void *hashmap_remove(hashmap_t hashmap, int key);
-void *hashmap_find(hashmap_t hashmap, int key);
-queue_t hashmap_to_queue(hashmap_t);
+hashmap_t hashmap_create(const int size);
+void hashmap_add(hashmap_t hashmap, const int key, void *element);
+void *hashmap_remove(hashmap_t hashmap, const int key);
+void *hashmap_find(const hashmap_t hashmap, const int key);
+queue_t hashmap_to_queue(const hashmap_t hashmap);
 void hashmap_destroy(hashmap_t hashmap);
 
 #endif

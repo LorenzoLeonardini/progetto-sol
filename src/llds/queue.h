@@ -15,12 +15,13 @@ typedef struct {
 typedef queue_struct_t *queue_t;
 
 queue_t queue_create();
-void *queue_head(queue_t queue);
-void *queue_tail(queue_t queue);
-void queue_add(queue_t queue, void *element);
-void *queue_pop(queue_t queue);
-void *queue_remove(queue_t queue, void *element);
-void *queue_remove_cmp(queue_t queue, void *element, int (*cmp)(void*, void*));
+void *queue_head(const queue_t queue);
+void *queue_tail(const queue_t queue);
+void queue_enqueue(queue_t queue, void *element);
+void *queue_dequeue(queue_t queue);
+void *queue_remove(queue_t queue, const void *element);
+void *queue_remove_cmp(queue_t queue, const void *element,
+	int (*cmp)(const void*, const void*));
 void queue_remove_all(queue_t queue);
 void queue_destroy(queue_t queue);
 
