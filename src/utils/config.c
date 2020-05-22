@@ -5,7 +5,14 @@
 
 #include "config.h"
 
-int K = -1, C = -1, E = -1, T = -1, P = -1, I = -1, W = -1;
+#define COMPARE(x) if(x == -1 && strcmp(line, #x) == 0) x = number;
+#define COMPARE_STR(x) if(x[0] == '\0' && strcmp(line, #x) == 0) \
+	strncpy(x, line + index, 99);
+	
+
+int K = -1, C = -1, E = -1, T = -1, P = -1, INITIAL_K = -1, PRODUCT_TIME = -1,
+	NOTIFY_TIME = -1, S = -1, S1 = -1, S2 = -1;
+char LOG_FILE[100] = { '\0' };
 
 static void read_config_file(char *file);
 
@@ -40,40 +47,42 @@ static void read_config_file(char *file) {
 
 	// Read line by line
 	while(getline(&line, &size, file_fd) > 0) {
-		if(strlen(line) < 3) continue;
-		if(line[1] != ':') continue;
-		int number = atoi(line + 2);
-		switch(line[0]) {
-			case 'K':
-				K = number;
-				break;
-			case 'C':
-				C = number;
-				break;
-			case 'E':
-				E = number;
-				break;
-			case 'T':
-				T = number;
-				break;
-			case 'P':
-				P = number;
-				break;
-			case 'I':
-				I = number;
-				break;
-			case 'W':
-				W = number;
-				break;
+		int index = -1;
+		for(int i = 0; i < 100 && index == -1; i++) {
+			if(line[i] == ':')
+				index = i;
+			if(line[i] == '\0') break;
 		}
+		if(index == -1) {
+			fprintf(stderr, "WARNING: Invalid config line\n\t%s\n", line);
+			continue;
+		}
+		line[index++] = '\0';
+		int number = atoi(line + index);
+		// This removes the final \n and replace it with \0
+		line[index + strlen(line + index) - 1] = '\0';
+
+		COMPARE(K)
+		else COMPARE(C)
+		else COMPARE(E)
+		else COMPARE(T)
+		else COMPARE(P)
+		else COMPARE(INITIAL_K)
+		else COMPARE_STR(LOG_FILE)
+		else COMPARE(PRODUCT_TIME)
+		else COMPARE(NOTIFY_TIME)
+		else COMPARE(S)
+		else COMPARE(S1)
+		else COMPARE(S2)
 	}
-	
+
 	free(line);
 	fclose(file_fd);
 	
 	// Check if all necessary data is provided
-	if(C == -1 || K == -1 || E == -1 || T == -1 
-			|| P == -1 || I == -1 || W == -1) {
+	if(K == -1 || C == -1 || E == -1 || T == -1 || P == -1 || INITIAL_K == -1 
+			|| LOG_FILE[0] == '\0' || PRODUCT_TIME == -1 || NOTIFY_TIME == -1
+			|| S == -1 || S1 == - 1 || S2 == - 1) {
 		fprintf(stderr, "Not all parameters were provided in config file\n");
 		exit(EXIT_FAILURE);
 	}
