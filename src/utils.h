@@ -4,6 +4,7 @@
 #include "llds/errors.h"
 #include "utils/consts.h"
 #include "utils/network.h"
+#include "utils/signals.h"
 #include "utils/time.h"
 
 #ifndef SILENT

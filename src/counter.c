@@ -45,11 +45,12 @@ void counter_add_customer(counter_t counter, customer_t customer) {
 	} else {
 		queue_enqueue(counter->queue, customer);
 	}
-	
+
 	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 }
 
 void *counter_thread_fnc(void *args) {
+	block_quit_hup_handlers();
 	counter_t counter = (counter_t) args;
 	PTHREAD_MUTEX_LOCK(&counter->mtx);
 	counter->open_timestamp = current_time_millis();
@@ -81,7 +82,7 @@ void *counter_thread_fnc(void *args) {
 				if(errno != EINTR) {
 					perror("Customer paying");
 					SUPERMARKET_ERROR("Counter [%u] haven't waited %lu.%lu and "
-							"wasn't stopped by signal\n", counter->id, tim.tv_sec, 
+							"wasn't stopped by signal\n", counter->id, tim.tv_sec,
 							tim.tv_nsec);
 					exit(EXIT_FAILURE);
 				}

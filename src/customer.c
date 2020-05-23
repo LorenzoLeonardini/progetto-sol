@@ -49,6 +49,7 @@ void customer_destroy(customer_t customer) {
 }
 
 void *customer_thread_fnc(void *attr) {
+	block_quit_hup_handlers();
 	pthread_detach(pthread_self());
 	register_handlers();
 	customer_t customer = (customer_t) attr;
@@ -61,7 +62,7 @@ void *customer_thread_fnc(void *attr) {
 		if(errno != EINTR) {
 			perror("Customer shopping");
 			SUPERMARKET_ERROR("Customer [%u] haven't waited %lu.%lu and "
-					"wasn't stopped by signal\n", customer->id, tim.tv_sec, 
+					"wasn't stopped by signal\n", customer->id, tim.tv_sec,
 					tim.tv_nsec);
 			exit(EXIT_FAILURE);
 		}
@@ -78,7 +79,7 @@ void *customer_thread_fnc(void *attr) {
 		while(customer->current_queue == -1 && !customer->being_served && !customer->served) {
 			if(customer_enqueue(customer) == -1) {
 				customer->products = 0;
-				customer->queue_time = current_time_millis() 
+				customer->queue_time = current_time_millis()
 					- customer->queue_time;
 				customer_exit(customer);
 				return NULL;
@@ -109,7 +110,7 @@ void *customer_thread_fnc(void *attr) {
 
 static void customer_ask_permission(customer_t customer) {
 	// Permission should always be granted and there should be no error
-	// However, I prefer trying a couple of times and then crashing 
+	// However, I prefer trying a couple of times and then crashing
 	// displaying why, instead of having a buggy program
 	int valid = 0, attempts = 3;
 	do {
@@ -120,9 +121,9 @@ static void customer_ask_permission(customer_t customer) {
 		close(socket);
 
 		// Checking validity of message and handling error
-		valid = message[0] == SO_CUSTOMER_GRANT_EXIT 
+		valid = message[0] == SO_CUSTOMER_GRANT_EXIT
 			&& message[1] == customer->id;
-		if(!valid) { 
+		if(!valid) {
 			SUPERMARKET_ERROR("Customer %u wasn't able to get permission from"
 				   " manager. Retrying...\n", customer->id);
 			sleep(1);
@@ -172,7 +173,15 @@ static void gestore(int signum) {}
 
 static void register_handlers() {
 	struct sigaction s;
+	sigset_t set;
+	// Block signals until handler is installed
+	SIG_FNC_ERR(sigfillset(&set));
+	pthread_sigmask(SIG_SETMASK, &set, NULL);
+	
 	memset(&s, 0, sizeof(s));
 	s.sa_handler = gestore;
 	sigaction(SIGUSR1, &s, NULL);
+	// Unblock
+	SIG_FNC_ERR(sigemptyset(&set));
+	pthread_sigmask(SIG_SETMASK, &set, NULL);
 }

@@ -21,22 +21,23 @@
 
 #include "supermarket.h"
 
-static int sigquit = 0, sighup = 0;
+static volatile sig_atomic_t sigquit = 0, sighup = 0;
 
 counter_t *counters;
 int opened_counters;
 
 rw_lock_t counters_status = NULL;
 
-static void register_handlers();
 static void create_counters();
 static void open_counter();
 static void close_counter();
 static void close_connections();
 
+static void handler(int signum);
+
 void supermarket_launch() {
 	// Signals interrupt system calls in order to stop waits
-	register_handlers(FALSE);
+	register_quit_hup_handlers(FALSE, handler);
 
 	srand(time(NULL));
 
@@ -63,7 +64,7 @@ void supermarket_launch() {
 	struct timespec tim = millis_to_timespec(NOTIFY_TIME);
 	while(!sigquit && !sighup) {
 		nanosleep(&tim, NULL);
-		
+
 		// Send the manager the current queue count for every counter
 		// Retrieve the queue lengths and construct the message
 		// We don't need the read lock, since this is the only thread
@@ -106,8 +107,6 @@ void supermarket_launch() {
 	close(connection);
 	free(message);
 	SUPERMARKET_LOG("Received signal, stopping\n");
-	
-	// From now on it's better not to be interrupted
 
 	// TODO: handle
 	if(sigquit) {
@@ -117,7 +116,9 @@ void supermarket_launch() {
 	} else if (sighup) {
 		guard_close(TRUE);
 	}
-	register_handlers(TRUE);
+
+	// From now on it's better not to be interrupted
+	register_quit_hup_handlers(TRUE, handler);
 	pthread_join(guard_thread, NULL);
 	SUPERMARKET_LOG("All the customers exited the supermarket\n");
 	SUPERMARKET_LOG("Closing all counters\n");
@@ -146,22 +147,11 @@ static void close_connections() {
 	SUPERMARKET_LOG("Supermarket is shutting down...\n");
 }
 
-static void gestore(int signum) {
+static void handler(int signum) {
 	if(signum == SIGQUIT)
 		sigquit = 1;
 	else if(signum == SIGHUP)
 		sighup = 1;
-}
-
-static void register_handlers(int restart) {
-	struct sigaction s;
-	memset(&s, 0, sizeof(s));
-	s.sa_handler = gestore;
-	if(restart) {
-		s.sa_flags = SA_RESTART;
-	}
-	sigaction(SIGQUIT, &s, NULL);
-	sigaction(SIGHUP, &s, NULL);
 }
 
 static void free_counters() {
@@ -184,7 +174,7 @@ static void create_counters() {
 }
 
 static void open_counter() {
-	PTHREAD_CREATE(&counters[opened_counters]->thread, NULL, 
+	PTHREAD_CREATE(&counters[opened_counters]->thread, NULL,
 			counter_thread_fnc, counters[opened_counters]);
 	opened_counters++;
 }

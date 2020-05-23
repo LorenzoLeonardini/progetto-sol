@@ -1,4 +1,4 @@
-# This is used to have percentage in build print messages 
+# This is used to have percentage in build print messages
 # overengineered, but it's nice
 ifndef ECHO
 T := $(shell $(MAKE) $(MAKECMDGOALS) --no-print-directory \
@@ -13,14 +13,14 @@ endif
 # Defining compiler, flags, object files & socked dirs and useful variables
 SHELL = bash
 CC = gcc
-CFLAGS = -Wall -pedantic -pthread 
+CFLAGS = -Wall -pedantic -pthread
 ODIR = objs
 SDIR = sockets
 GREEN = \033[0;32m
 NC = \033[0m
 
 # List all the files needed for each target
-_OBJS = counter.o customer.o guard.o logger.o main.o manager.o supermarket.o utils/config.o utils/network.o utils/time.o
+_OBJS = counter.o customer.o guard.o logger.o main.o manager.o supermarket.o utils/config.o utils/network.o utils/signals.o utils/time.o
 _LLDS_OBJS = llds/hashmap.o llds/queue.o llds/read_write_lock.o
 # Generate final list with object dir
 OBJS = $(patsubst %,$(ODIR)/%,$(_OBJS))
@@ -28,12 +28,12 @@ LLDS_OBJS = $(patsubst %,$(ODIR)/%,$(_LLDS_OBJS))
 
 # List all the header files
 HEADERS = src/counter.h src/customer.h src/guard.h src/logger.h src/manager.h src/supermarket.h src/utils.h \
-		  src/utils/config.h src/utils/consts.h src/utils/network.h src/utils/time.h
+		  src/utils/config.h src/utils/consts.h src/utils/network.h src/utils/signals.h src/utils/time.h
 LLDS_HEADERS = src/llds/errors.h src/llds/hashmap.h src/llds/queue.h src/llds/read_write_lock.h
 
 .PHONY: all clean
 
-all: llds supermercato 
+all: llds supermercato
 
 # Delete intermediate files and others
 clean:
@@ -57,7 +57,7 @@ supermercato: $(OBJS) llds
 	@$(ECHO) "$(GREEN)\033[1mTarget $@ built$(NC)"
 
 # Object files for each source needed
-$(ODIR)/%.o: src/%.c $(HEADERS) $(LLDS_HEADERS) 
+$(ODIR)/%.o: src/%.c $(HEADERS) $(LLDS_HEADERS)
 	@[ -d $(ODIR)/utils ] || mkdir -p $(ODIR)/utils
 	@$(CC) $(CFLAGS) -c -o $@ $<
 	@$(ECHO) "$(GREEN)Generating object file $@$(NC)"
@@ -71,7 +71,7 @@ $(ODIR)/llds/%.o: src/llds/%.c $(LLDS_HEADERS)
 	@[ -d $(ODIR)/llds ] || mkdir -p $(ODIR)/llds
 	@$(CC) $(CFLAGS) -c -o $@ $<
 	@$(ECHO) "$(GREEN)Generating object file $@$(NC)"
-	
+
 lldstest.out: llds src/llds/test/test.c
 	@$(CC) $(CFLAGS) -g src/llds/test/test.c -L . -lllds -o lldstest.out
 
@@ -98,4 +98,4 @@ test2: all
 	./analisi.sh exec2.log
 
 lldstest: lldstest.out
-	valgrind --leak-check=full ./lldstest.out	
+	valgrind --leak-check=full ./lldstest.out
