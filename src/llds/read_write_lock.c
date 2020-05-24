@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <assert.h>
 #include <errno.h>
 #include <pthread.h>
 
@@ -75,13 +76,18 @@ void rw_lock_stop_write(rw_lock_t rw_lock) {
 	if(rw_lock->waiting_writers > 0) {
 		PTHREAD_COND_SIGNAL(&rw_lock->write_go);
 	} else if(rw_lock->waiting_readers > 0) {
-		PTHREAD_COND_SIGNAL(&rw_lock->read_go);
+		PTHREAD_COND_BROADCAST(&rw_lock->read_go);
 	}
 
 	PTHREAD_MUTEX_UNLOCK(&rw_lock->mtx);
 }
 
 void rw_lock_destroy(rw_lock_t rw_lock) {
+	assert(rw_lock->active_writers == 0);
+	assert(rw_lock->active_readers == 0);
+	assert(rw_lock->waiting_writers == 0);
+	assert(rw_lock->waiting_readers == 0);
+
 	PTHREAD_MUTEX_DESTROY_ERR(&rw_lock->mtx);
 	PTHREAD_COND_DESTROY_ERR(&rw_lock->read_go);
 	PTHREAD_COND_DESTROY_ERR(&rw_lock->write_go);
@@ -90,7 +96,7 @@ void rw_lock_destroy(rw_lock_t rw_lock) {
 }
 
 static int rw_lock_read_should_wait(rw_lock_t rw_lock) {
-	if(rw_lock->active_writers > 0 || rw_lock->active_writers > 0) {
+	if(rw_lock->active_writers > 0 || rw_lock->waiting_writers > 0) {
 		return 1;
 	}
 	return 0;

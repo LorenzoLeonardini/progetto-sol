@@ -12,7 +12,7 @@ void register_quit_hup_handlers(int restart, void (*handler)(int signum)) {
 	sigset_t set1, set2;
 	// Block signals until handler is installed
 	SIG_FNC_ERR(sigfillset(&set1));
-	pthread_sigmask(SIG_SETMASK, &set1, NULL);
+	PTHREAD_SIGMASK(SIG_SETMASK, &set1, NULL);
 	// Block SIGQUIT and SIGHUP in sigaction
 	SIG_FNC_ERR(sigemptyset(&set2));
 	SIG_FNC_ERR(sigaddset(&set2, SIGQUIT));
@@ -28,7 +28,7 @@ void register_quit_hup_handlers(int restart, void (*handler)(int signum)) {
 	SIG_FNC_ERR(sigaction(SIGHUP, &s, NULL));
 	// Unblock signals
 	SIG_FNC_ERR(sigemptyset(&set1));
-	pthread_sigmask(SIG_SETMASK, &set1, NULL);
+	PTHREAD_SIGMASK(SIG_SETMASK, &set1, NULL);
 }
 
 void block_quit_hup_handlers() {
@@ -37,5 +37,5 @@ void block_quit_hup_handlers() {
 	SIG_FNC_ERR(sigemptyset(&set));
 	SIG_FNC_ERR(sigaddset(&set, SIGQUIT));
 	SIG_FNC_ERR(sigaddset(&set, SIGHUP));
-	pthread_sigmask(SIG_BLOCK, &set, NULL);
+	PTHREAD_SIGMASK(SIG_BLOCK, &set, NULL);
 }

@@ -2,10 +2,15 @@
 #define _UTILS_H
 
 #include "llds/errors.h"
-#include "utils/consts.h"
 #include "utils/network.h"
 #include "utils/signals.h"
 #include "utils/time.h"
+
+#define UNIX_PATH_MAX 108
+#define SOCKET_PATH(x) "./sockets/" x
+
+#define TRUE 1
+#define FALSE 0
 
 #ifndef SILENT
 	#define MANAGER_LOG(...) \

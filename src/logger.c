@@ -59,8 +59,8 @@ void logger_log_customer_data(const customer_t customer) {
 	}
 
 	dprintf(file, "%u:\n", customer->id);
-	dprintf(file, "\tTEMPO NEL SUPERMERCATO: %d\n", customer->shopping_time
-			+ customer->products * 30);
+	dprintf(file, "\tTEMPO NEL SUPERMERCATO: %llu\n",
+				current_time_millis() - customer->total_time);
 	dprintf(file, "\tTEMPO IN CODA: %llu\n", customer->queue_time);
 	dprintf(file, "\tNUMERO PRODOTTI: %d\n", customer->products);
 	dprintf(file, "\tNUMERO CAMBI CODA: %d\n", customer->visited_queues);

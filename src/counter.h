@@ -27,13 +27,14 @@ typedef struct {
 	pthread_t thread;
 	pthread_mutex_t mtx;
 	pthread_cond_t idle;
+	// Timer
+	msec_t timer;
 } counter_struct_t;
 typedef counter_struct_t *counter_t;
 
 counter_t counter_create(unsigned int id);
 void counter_add_customer(counter_t counter, customer_t customer);
 void *counter_thread_fnc(void *args);
-unsigned int counter_queue_length(counter_t counter);
 void counter_destroy(counter_t counter);
 
 #endif

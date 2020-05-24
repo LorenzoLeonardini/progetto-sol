@@ -28,7 +28,7 @@ LLDS_OBJS = $(patsubst %,$(ODIR)/%,$(_LLDS_OBJS))
 
 # List all the header files
 HEADERS = src/counter.h src/customer.h src/guard.h src/logger.h src/manager.h src/supermarket.h src/utils.h \
-		  src/utils/config.h src/utils/consts.h src/utils/network.h src/utils/signals.h src/utils/time.h
+		  src/utils/config.h src/utils/network.h src/utils/signals.h src/utils/time.h
 LLDS_HEADERS = src/llds/errors.h src/llds/hashmap.h src/llds/queue.h src/llds/read_write_lock.h
 
 .PHONY: all clean

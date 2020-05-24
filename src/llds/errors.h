@@ -41,4 +41,8 @@
 	PTHREAD_ERROR(pthread_cond_signal(cond_t), \
 			"Signaling " #cond_t " condition")
 
+#define PTHREAD_COND_BROADCAST(cond_t) \
+	PTHREAD_ERROR(pthread_cond_broadcast(cond_t), \
+			"Signaling " #cond_t " condition")
+
 #endif

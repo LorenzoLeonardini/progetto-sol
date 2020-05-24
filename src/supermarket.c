@@ -30,13 +30,14 @@ rw_lock_t counters_status = NULL;
 
 static void create_counters();
 static void open_counter();
+static void supermarket_loop(int connection);
 static void close_counter();
-static void close_connections();
+static void free_counters();
 
 static void handler(int signum);
 
 void supermarket_launch() {
-	// Signals interrupt system calls in order to stop waits
+	// Signals interrupt system calls in order to stop while
 	register_quit_hup_handlers(FALSE, handler);
 
 	srand(time(NULL));
@@ -50,65 +51,19 @@ void supermarket_launch() {
 		open_counter();
 	}
 
+	// Connect to manager, and prepare for listening to counters instructions
+	int conn = connect_to_manager_server();
+	int msg = SO_SUPERMARKET_CONNECTION;
+	write(conn, &msg, sizeof(int));
+
 	// Init guard
 	pthread_t guard_thread;
 	PTHREAD_CREATE(&guard_thread, NULL, &guard_create, NULL);
 
-	int *message = (int*) malloc(sizeof(int) * (K + 2));
-	message[0] = SO_SUPERMARKET_CONNECTION;
-	int connection = connect_to_manager_server();
-	write(connection, message, sizeof(int));
-
-	// While no signal is received, periodically send the manager info
-	// about counters
-	struct timespec tim = millis_to_timespec(NOTIFY_TIME);
-	while(!sigquit && !sighup) {
-		nanosleep(&tim, NULL);
-
-		// Send the manager the current queue count for every counter
-		// Retrieve the queue lengths and construct the message
-		// We don't need the read lock, since this is the only thread
-		// capable of writing
-		int length = sizeof(int) * (opened_counters + 2);
-		message[0] = SO_COUNTER_QUEUE;
-		message[1] = opened_counters;
-		for(int i = 0; i < opened_counters; i++) {
-			message[2 + i] = counter_queue_length(counters[i]);
-		}
-		// Send the data and get a response
-		write(connection, message, length);
-		int bytes;
-		do {
-			bytes = read(connection, message, sizeof(int) * 2);
-		} while(bytes == -1 && errno == EINTR);
-		// Process the response
-		if(message[0] != SO_DESIRED_COUNTERS) {
-			// Not necessarily a problem, it could just be the signal
-			SUPERMARKET_ERROR("Expected SO_DESIRED_COUNTERS, not received. Resetting communication.\n");
-			close(connection);
-			connection = connect_to_manager_server();
-			message[0] = SO_SUPERMARKET_CONNECTION;
-			write(connection, message, sizeof(int));
-			continue;
-		}
-		int desired_counters = message[1];
-
-		SUPERMARKET_LOG("Manager requested %d counters\n", desired_counters);
-
-		if(desired_counters != opened_counters) {
-			rw_lock_start_write(counters_status);
-			while(opened_counters < desired_counters)
-				open_counter();
-			while(opened_counters > desired_counters)
-				close_counter();
-			rw_lock_stop_write(counters_status);
-		}
-	}
-	close(connection);
-	free(message);
+	// Listen to counters instructions
+	supermarket_loop(conn);
 	SUPERMARKET_LOG("Received signal, stopping\n");
 
-	// TODO: handle
 	if(sigquit) {
 		while(opened_counters > 0)
 			close_counter();
@@ -128,40 +83,20 @@ void supermarket_launch() {
 
 	// Comunicate the manager every customer exited and it can stop listening
 	// for connections
-	int conn = connect_to_manager_server();
+	int conn2 = connect_to_manager_server();
 	int data[] = { SO_CLOSE_CONNECTION };
-	write(conn, data, sizeof(int));
+	write(conn2, data, sizeof(int));
+	close(conn2);
 	close(conn);
 
+	// Log
 	logger_log_general_data(sigquit ? SIGQUIT : SIGHUP);
 	for(int i = 0; i < K; i++)
 		logger_log_counter_data(counters[i]);
 	logger_cleanup();
-	close_connections();
-	exit(EXIT_SUCCESS);
-}
 
-static void close_connections() {
-	// After closing, the file descriptors are reset to -1 to avoid
-	// problems in case this function is called twice (or more)
 	SUPERMARKET_LOG("Supermarket is shutting down...\n");
-}
-
-static void handler(int signum) {
-	if(signum == SIGQUIT)
-		sigquit = 1;
-	else if(signum == SIGHUP)
-		sighup = 1;
-}
-
-static void free_counters() {
-	SUPERMARKET_LOG("Cleaning up counters\n");
-	for(int i = 0; i < K; i++) {
-		counter_destroy(counters[i]);
-	}
-	free(counters);
-
-	rw_lock_destroy(counters_status);
+	exit(EXIT_SUCCESS);
 }
 
 static void create_counters() {
@@ -174,18 +109,60 @@ static void create_counters() {
 }
 
 static void open_counter() {
+	rw_lock_start_write(counters_status);
 	PTHREAD_CREATE(&counters[opened_counters]->thread, NULL,
 			counter_thread_fnc, counters[opened_counters]);
 	opened_counters++;
 }
 
+static void supermarket_loop(int connection) {
+	int n_bytes;
+	int message[2];
+	while((n_bytes = read(connection, &message, sizeof(int) * 2)) > 0) {
+		if(message[0] != SO_DESIRED_COUNTERS) {
+			// Not necessarily a problem, it could just be the signal
+			SUPERMARKET_ERROR("Expected SO_DESIRED_COUNTERS, not received.\n");
+			exit(EXIT_FAILURE);
+		}
+		int desired_counters = message[1];
+
+		SUPERMARKET_LOG("Manager requested %d counters\n", desired_counters);
+
+		if(desired_counters != opened_counters) {
+			while(opened_counters < desired_counters)
+				open_counter();
+			while(opened_counters > desired_counters)
+				close_counter();
+		}
+	}
+}
+
 static void close_counter() {
+	rw_lock_start_write(counters_status);
 	opened_counters--;
 	SUPERMARKET_LOG("Closing counter %d\n", opened_counters);
 	counter_t closing = counters[opened_counters];
+	rw_lock_stop_write(counters_status);
 	PTHREAD_MUTEX_LOCK(&closing->mtx);
 	closing->status = CLOSING;
 	PTHREAD_COND_SIGNAL(&closing->idle);
 	PTHREAD_MUTEX_UNLOCK(&closing->mtx);
 	pthread_join(closing->thread, NULL);
+}
+
+static void free_counters() {
+	SUPERMARKET_LOG("Cleaning up counters\n");
+	for(int i = 0; i < K; i++) {
+		counter_destroy(counters[i]);
+	}
+	free(counters);
+
+	rw_lock_destroy(counters_status);
+}
+
+static void handler(int signum) {
+	if(signum == SIGQUIT)
+		sigquit = 1;
+	else if(signum == SIGHUP)
+		sighup = 1;
 }

@@ -36,6 +36,7 @@ static void create_customer() {
 
 void *guard_create(void *attr) {
 	block_quit_hup_handlers();
+	srand(time(NULL));
 	PTHREAD_MUTEX_LOCK(&guard_mtx);
 	customer_n = 0;
 	current_customer_n = 0;

@@ -3,13 +3,14 @@
 mkdir tmp
 
 counter=0
+groups=0
 signal=1
 
 while true; do
 
 	time=$RANDOM
-	let "time %= 60"
-	let "time += 30"
+	let "time %= 15"
+	let "time += 5"
 	valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes --log-file="tmp/log.txt" ./supermercato.out config1.txt & \
 	pid=$(pgrep memcheck | head -1); \
 	sleep $time; \
@@ -23,8 +24,10 @@ while true; do
 		mv tmp/log.txt "tmp/$file"
 	else
 		let "counter += 1"
-		if ! (($counter % 50)); then
-			telegram-notify "$counter successful tests for project" 3
+		if [[ $counter = 50 ]]; then
+			let "groups += 1"
+			telegram-notify "$(($counter * $groups)) successful tests for project" 3
+			counter=0
 		fi
 	fi
 	let "signal += 2"
