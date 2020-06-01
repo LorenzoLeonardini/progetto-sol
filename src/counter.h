@@ -7,12 +7,12 @@
 #include "utils.h"
 #include "customer.h"
 
-typedef enum { OPEN, CLOSED, CLOSING, GO_HOME, WENT_HOME } status_t;
+typedef enum { OPEN, CLOSED, CLOSING } counter_status_t;
 typedef struct {
 	// Counter main data
 	unsigned int id;
 	queue_t queue;
-	status_t status;
+	counter_status_t status;
 	// Time to handle customer
 	int time_for_customer;
 	// Data

@@ -7,6 +7,10 @@
 
 #include "signals.h"
 
+/**
+ * Register an handler both for sigquit and sighup. Takes care of blocking
+ * not to loose any signal
+ */
 void register_quit_hup_handlers(int restart, void (*handler)(int signum)) {
 	struct sigaction s;
 	sigset_t set1, set2;
@@ -31,6 +35,10 @@ void register_quit_hup_handlers(int restart, void (*handler)(int signum)) {
 	PTHREAD_SIGMASK(SIG_SETMASK, &set1, NULL);
 }
 
+/**
+ * Completely blocks sighup and sigquit interrupts. This allows other threads
+ * to handle them
+ */
 void block_quit_hup_handlers() {
 	sigset_t set;
 	SIG_FNC_ERR(sigfillset(&set));

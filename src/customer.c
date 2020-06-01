@@ -39,8 +39,7 @@ customer_t customer_create(unsigned int id) {
 	customer->visited_queues = 0;
 	customer->queue_time = 0;
 	customer->total_time = current_time_millis();
-	customer->being_served = FALSE;
-	customer->served = FALSE;
+	customer->status = SHOPPING;
 
 	PTHREAD_MUTEX_INIT_ERR(&customer->mtx, NULL);
 	PTHREAD_COND_INIT_ERR(&customer->waiting_service, NULL);
@@ -57,8 +56,10 @@ void *customer_thread_fnc(void *attr) {
 		return NULL;
 
 	PTHREAD_MUTEX_LOCK(&customer->mtx);
+	customer->status = QUEUE;
 
 	if(customer->products == 0) {
+		customer->status = EXITING;
 		// Need to ask the manager permission to exit
 		customer_ask_permission(customer);
 		customer_exit(customer);
@@ -69,7 +70,7 @@ void *customer_thread_fnc(void *attr) {
 	struct timespec tim = millis_to_timespec(S);
 
 	customer->queue_time = current_time_millis();
-	while(!customer->being_served && !customer->served) {
+	while(customer->status == QUEUE) {
 		if(customer_enqueue(customer) == -1) {
 			// No open counter
 			customer->products = 0;
@@ -80,7 +81,7 @@ void *customer_thread_fnc(void *attr) {
 		}
 
 		// Loop to periodically decide if to change queue
-		while(customer->current_queue != -1 && !customer->being_served && !customer->served) {
+		while(customer->status == QUEUE && customer->current_queue != -1) {
 			PTHREAD_MUTEX_UNLOCK(&customer->mtx);
 
 			if(!customer_sleep(customer, tim))
@@ -88,12 +89,12 @@ void *customer_thread_fnc(void *attr) {
 
 			PTHREAD_MUTEX_LOCK(&customer->mtx);
 			// Could have been "removed" from queue or served
-			if (customer->current_queue == -1 || customer->being_served
-				|| customer->served) continue;
+			if (customer->current_queue == -1 || customer->status != QUEUE)
+				continue;
 			customer_consider_queue_change(customer);
 		}
 	}
-	while(!customer->served) {
+	while(customer->status != SERVED) {
 		PTHREAD_COND_WAIT(&customer->waiting_service, &customer->mtx);
 	}
 
@@ -102,16 +103,23 @@ void *customer_thread_fnc(void *attr) {
 	return NULL;
 }
 
+/**
+ * If a customer is not buying anything, they need to ask the manager permission
+ * to exit the supermarket.
+ */
 static void customer_ask_permission(customer_t customer) {
 	// Permission should always be granted and there should be no error
 	// However, I prefer trying a couple of times and then crashing
-	// displaying why, instead of having a buggy program
+	// displaying why, instead of ignoring errors and having a buggy program
 	int valid = 0, attempts = 3;
 	do {
 		int socket = connect_to_manager_server();
 		int message[2] = { SO_CUSTOMER_REQUEST_EXIT, customer->id };
 		write(socket, message, sizeof(int) * 2);
-		read(socket, message, sizeof(int) * 2);
+		int bytes;
+		do {
+			bytes = read(socket, message, sizeof(int) * 2);
+		} while(bytes == -1 && errno == EINTR);
 		close(socket);
 
 		// Checking validity of message and handling error
@@ -131,14 +139,15 @@ static void customer_ask_permission(customer_t customer) {
 	}
 }
 
-/*
+/**
  * Find a counter for the customer. In case all the counters are closed
  * (supermarket closed with signal SIGQUIT), returns -1, otherwise returns
  * counter number
  */
 static int customer_enqueue(customer_t customer) {
+	assert(customer->status == QUEUE && customer->current_queue == -1);
 	rw_lock_start_read(counters_status);
-	if(opened_counters == 0) {
+	if(opened_counters == 0 || supermarket_opened == FALSE) {
 		rw_lock_stop_read(counters_status);
 		return -1;
 	}
@@ -150,10 +159,10 @@ static int customer_enqueue(customer_t customer) {
 	return customer->current_queue;
 }
 
-/*
+/**
  * Try to nanosleep. In case it fails, if it's because of an interrupt then the
  * customer exit the supermarket immediately. If it just doesn't work the
- * program crash.
+ * program crashes.
  */
 static int customer_sleep(customer_t customer, struct timespec tim) {
 	struct timespec rem;
@@ -174,29 +183,32 @@ static int customer_sleep(customer_t customer, struct timespec tim) {
 	return 1;
 }
 
-/*
+/**
  * Decide if customer is gonna change queue. In that case, exit from the current
  * one. The customer loop will take care of chosing another counter.
  */
 static void customer_consider_queue_change(customer_t customer) {
 	assert(customer->current_queue != -1);
 	// Count number of customers in the same queue
-	rw_lock_start_read(counters_status);
 	counter_t current_counter = counters[customer->current_queue];
 	PTHREAD_MUTEX_LOCK(&current_counter->mtx);
 	if(current_counter->queue->size > S2 * 2
 		&& rand() % 10 > customer->patience_level) {
-		customer->current_queue = -1;
-		queue_remove(current_counter->queue, customer);
+		// It could happen that the counter has started serving the customer,
+		// but it hasn't updated the "being_served" flag yet. Or the counter has
+		// told the customer to change queue because of a closure. In that case
+		// it's not in the queue anymore and the `remove` returns NULL
+		if(queue_remove(current_counter->queue, customer) != NULL)
+			customer->current_queue = -1;
 	}
 	PTHREAD_MUTEX_UNLOCK(&current_counter->mtx);
-	rw_lock_stop_read(counters_status);
 }
 
-/*
+/**
  * Log the customer data, inform the guard, unlock the mutex, free the memory
  */
 static void customer_exit(customer_t customer) {
+	customer->status = EXITING;
 	logger_log_customer_data(customer);
 	guard_customer_exiting(customer->id);
 	PTHREAD_MUTEX_UNLOCK(&customer->mtx);
@@ -218,7 +230,7 @@ void customer_destroy(customer_t customer) {
 	free(customer);
 }
 
-static void gestore(int signum) {}
+static void handler(int signum) {}
 
 static void register_handlers() {
 	struct sigaction s;
@@ -228,7 +240,7 @@ static void register_handlers() {
 	pthread_sigmask(SIG_SETMASK, &set, NULL);
 
 	memset(&s, 0, sizeof(s));
-	s.sa_handler = gestore;
+	s.sa_handler = handler;
 	sigaction(SIGUSR1, &s, NULL);
 	// Unblock
 	SIG_FNC_ERR(sigemptyset(&set));

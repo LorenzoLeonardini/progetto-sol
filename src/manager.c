@@ -57,6 +57,7 @@ void manager_launch(int sup_pid) {
 
 	start_socket();
 	wait_supermarket_connection();
+
 	int s_fd;
 	while((s_fd = accept(socket_fd, NULL, 0)) != -1) {
 		handle_connection(s_fd);
@@ -64,12 +65,13 @@ void manager_launch(int sup_pid) {
 
 	// Cleanup sockets
 	close_connections();
-
 	wait_supermarket_close(supermarket_pid);
+
 	PTHREAD_MUTEX_LOCK(&queues_mtx);
 	free(queues);
 	queues = NULL;
 	PTHREAD_MUTEX_UNLOCK(&queues_mtx);
+
 	exit(EXIT_SUCCESS);
 }
 
@@ -89,11 +91,18 @@ static void start_socket() {
 	atexit(close_connections);
 }
 
+/**
+ * Supermarket connection is needed to communicate counters open/close requests.
+ * This function waits until the supermarket connects and updates global
+ * variables accordingly.
+ */
 static void wait_supermarket_connection() {
 	while(supermarket_connection == -1) {
 		int s_fd = accept(socket_fd, NULL, 0);
 		int type;
-		read(s_fd, &type, sizeof(int));
+		MANAGER_SOCKET_READ(s_fd, &type, sizeof(int),
+				"[Manager] Getting supermarket connection",
+				"Can't get supermarket connection",);
 		if(type == SO_SUPERMARKET_CONNECTION)
 			supermarket_connection = s_fd;
 		else
@@ -140,11 +149,13 @@ static void handle_connection(int connection) {
 			break;
 		case SO_COUNTER_QUEUE:
 			// Checking if connection should be closed
+			PTHREAD_MUTEX_LOCK(&queues_mtx);
 			if(signal_received && supermarket_connection != -1) {
 				MANAGER_LOG("Connection with supermarket has been closed\n");
 				close(supermarket_connection);
 				supermarket_connection = -1;
 			}
+			PTHREAD_MUTEX_UNLOCK(&queues_mtx);
 			PTHREAD_CREATE(&thread, NULL, queue_status,
 				fd_to_args(connection));
 			break;
@@ -155,6 +166,9 @@ static void handle_connection(int connection) {
 	}
 }
 
+/**
+ * Give customer permission to exit the supermarket with no products
+ */
 static void *customer_request_exit(void *args) {
 	block_quit_hup_handlers();
 	int connection = args_to_fd(args);
@@ -169,6 +183,10 @@ static void *customer_request_exit(void *args) {
 	return NULL;
 }
 
+/**
+ * Handle a queue status info message. Decide if to open or close any and, in
+ * case the supermarket is still opened, send the new requirement via socket
+ */
 static void *queue_status(void *args) {
 	block_quit_hup_handlers();
 	int connection = args_to_fd(args);
@@ -177,10 +195,10 @@ static void *queue_status(void *args) {
 	// Getting current queue status
 	MANAGER_SOCKET_READ(connection, data, sizeof(int) * 3,
 			"[Manager] Getting open counters count",
-			"Received wrong comunication about counters status", NULL);
+			"Received wrong communication about counters status", NULL);
 	MANAGER_SOCKET_READ(connection, &timestamp, sizeof(msec_t),
 			"[Manager] Getting open counters count",
-			"Received wrong comunication about counters status", NULL);
+			"Received wrong communication about counters status", NULL);
 	close(connection);
 
 	int counter_number = data[0];
@@ -198,6 +216,8 @@ static void *queue_status(void *args) {
 	queues[counter].queue_len = queue;
 	queues[counter].timestamp = timestamp;
 
+	// Random log, just for fun and to know things are happening. Synced with
+	// the first counter
 	if(counter == 0 && supermarket_connection != -1) {
 		MANAGER_LOG("Received queues status from counters\n");
 		for(int i = 0; i < K; i++)
@@ -207,6 +227,7 @@ static void *queue_status(void *args) {
 
 	// Counting queues with too few and too many customers
 	for(int i = 0; i < K; i++) {
+		// Old information is ignored
 		if(queues[i].timestamp < timestamp - (NOTIFY_TIME / 3))
 			continue;
 		if(queues[i].queue_len <= 1) count_one++;

@@ -20,6 +20,10 @@ static short should_gentle_close = 0;
 static pthread_mutex_t guard_mtx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t guard_cond = PTHREAD_COND_INITIALIZER;
 
+/**
+ * Create a customer, let them into the supermarket, add their thread to a
+ * hashmap, increment counters and so on...
+ */
 static void create_customer() {
 	// Customer creation
 	customer_t customer = customer_create(customer_n);

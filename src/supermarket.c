@@ -25,6 +25,7 @@ static volatile sig_atomic_t sigquit = 0, sighup = 0;
 
 counter_t *counters;
 int opened_counters;
+int supermarket_opened = TRUE;
 
 rw_lock_t counters_status = NULL;
 
@@ -51,20 +52,23 @@ void supermarket_launch() {
 		open_counter();
 	}
 
-	// Connect to manager, and prepare for listening to counters instructions
+	// Connect to manager, and prepare for listening for counters instructions
 	int conn = connect_to_manager_server();
 	int msg = SO_SUPERMARKET_CONNECTION;
 	write(conn, &msg, sizeof(int));
 
-	// Init guard
+	// Init and start guard
 	pthread_t guard_thread;
 	PTHREAD_CREATE(&guard_thread, NULL, &guard_create, NULL);
 
-	// Listen to counters instructions
+	// Listen for counters instructions
 	supermarket_loop(conn);
 	SUPERMARKET_LOG("Received signal, stopping\n");
 
 	if(sigquit) {
+		rw_lock_start_write(counters_status);
+		supermarket_opened = FALSE;
+		rw_lock_stop_write(counters_status);
 		while(opened_counters > 0)
 			close_counter();
 		guard_close(FALSE);
@@ -81,7 +85,7 @@ void supermarket_launch() {
 		close_counter();
 	SUPERMARKET_LOG("All counters closed\n");
 
-	// Comunicate the manager every customer exited and it can stop listening
+	// Communicate the manager every customer exited and it can stop listening
 	// for connections
 	int conn2 = connect_to_manager_server();
 	int data[] = { SO_CLOSE_CONNECTION };
@@ -95,7 +99,10 @@ void supermarket_launch() {
 		logger_log_counter_data(counters[i]);
 	logger_cleanup();
 
+	free_counters();
+
 	SUPERMARKET_LOG("Supermarket is shutting down...\n");
+	fflush(stdout);
 	exit(EXIT_SUCCESS);
 }
 
@@ -110,9 +117,9 @@ static void create_counters() {
 
 static void open_counter() {
 	rw_lock_start_write(counters_status);
-	PTHREAD_CREATE(&counters[opened_counters]->thread, NULL,
-			counter_thread_fnc, counters[opened_counters]);
 	opened_counters++;
+	PTHREAD_CREATE(&counters[opened_counters - 1]->thread, NULL,
+			counter_thread_fnc, counters[opened_counters - 1]);
 }
 
 static void supermarket_loop(int connection) {
@@ -142,20 +149,24 @@ static void close_counter() {
 	opened_counters--;
 	SUPERMARKET_LOG("Closing counter %d\n", opened_counters);
 	counter_t closing = counters[opened_counters];
-	rw_lock_stop_write(counters_status);
+
 	PTHREAD_MUTEX_LOCK(&closing->mtx);
 	closing->status = CLOSING;
 	PTHREAD_COND_SIGNAL(&closing->idle);
 	PTHREAD_MUTEX_UNLOCK(&closing->mtx);
+	rw_lock_stop_write(counters_status);
+
 	pthread_join(closing->thread, NULL);
 }
 
 static void free_counters() {
+	if(counters == NULL) return;
 	SUPERMARKET_LOG("Cleaning up counters\n");
 	for(int i = 0; i < K; i++) {
 		counter_destroy(counters[i]);
 	}
 	free(counters);
+	counters = NULL;
 
 	rw_lock_destroy(counters_status);
 }

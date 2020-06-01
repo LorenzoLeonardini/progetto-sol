@@ -6,7 +6,7 @@
 
 extern rw_lock_t counters_status;
 extern counter_t *counters;
-extern int opened_counters;
+extern int opened_counters, supermarket_opened;
 
 void supermarket_launch();
 

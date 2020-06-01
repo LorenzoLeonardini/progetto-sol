@@ -77,10 +77,7 @@ lldstest.out: llds src/llds/test/test.c
 
 
 # Tests
-.PHONY: test test1 test2 lldstest
-
-test: all
-	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes ./supermercato.out
+.PHONY: test1 test2 lldstest
 
 test1: all
 	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes ./supermercato.out config1.txt & \

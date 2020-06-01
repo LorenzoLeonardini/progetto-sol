@@ -27,8 +27,10 @@ counter_t counter_create(unsigned int id) {
 	counter->queue = queue_create();
 	counter->status = CLOSED;
 
+	// Serving time
 	counter->time_for_customer = rand() % 61 + 20;
 
+	// Statistics
 	counter->tot_customers = 0;
 	counter->tot_products = 0;
 
@@ -42,15 +44,16 @@ counter_t counter_create(unsigned int id) {
 	return counter;
 }
 
+/**
+ * Add a customer to a counter queue. The counter obviously needs to be
+ * opened
+ */
 void counter_add_customer(counter_t counter, customer_t customer) {
 	PTHREAD_MUTEX_LOCK(&counter->mtx);
 
-	if(counter->status != OPEN) {
-		SUPERMARKET_ERROR("Trying to add a client to a closed counter\n");
-	} else {
-		queue_enqueue(counter->queue, customer);
-		PTHREAD_COND_SIGNAL(&counter->idle);
-	}
+	assert(counter->status == OPEN);
+	queue_enqueue(counter->queue, customer);
+	PTHREAD_COND_SIGNAL(&counter->idle);
 
 	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 }
@@ -60,6 +63,7 @@ void *counter_thread_fnc(void *args) {
 	counter_t counter = (counter_t) args;
 	PTHREAD_MUTEX_LOCK(&counter->mtx);
 
+	// Setting status and timing
 	counter->open_timestamp = current_time_millis();
 	counter->status = OPEN;
 	counter->timer = counter->open_timestamp;
@@ -77,8 +81,11 @@ void *counter_thread_fnc(void *args) {
 			if((errno = pthread_cond_timedwait(&counter->idle,
 				&counter->mtx, &tim)) != 0) {
 				if(errno == ETIMEDOUT) {
-					if(current_time_millis() >= counter->timer + NOTIFY_TIME)
+					if(current_time_millis() >= counter->timer + NOTIFY_TIME) {
+						PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 						counter_notify_manager(counter);
+						PTHREAD_MUTEX_LOCK(&counter->mtx);
+					}
 				} else {
 					perror("Timedwait");
 					exit(EXIT_FAILURE);
@@ -98,8 +105,9 @@ void *counter_thread_fnc(void *args) {
 
 			// Save timing data into counter ds
 			PTHREAD_MUTEX_LOCK(&customer->mtx);
+			assert(customer->status == QUEUE && customer->current_queue == counter->id);
 			msec_t start = current_time_millis();
-			customer->being_served = 1;
+			customer->status = BEING_SERVED;
 			customer->queue_time = start - customer->queue_time;
 			int prods = customer->products;
 			PTHREAD_MUTEX_UNLOCK(&customer->mtx);
@@ -108,11 +116,13 @@ void *counter_thread_fnc(void *args) {
 			counter->tot_customers++;
 			counter->tot_products += prods;
 
+			// Serve the customer
 			counter_sleep(counter, counter->time_for_customer
 				+ prods * PRODUCT_TIME);
 
+			// Tell the customer they're finished and set stats
 			PTHREAD_MUTEX_LOCK(&customer->mtx);
-			customer->served = 1;
+			customer->status = SERVED;
 			customer->current_queue = -1;
 
 			msec_t *t = (msec_t*) malloc(sizeof(msec_t));
@@ -129,7 +139,7 @@ void *counter_thread_fnc(void *args) {
 	return NULL;
 }
 
-/*
+/**
  * Returns milliseconds remaining to next notification
  */
 static msec_t counter_to_next_notification(counter_t counter) {
@@ -138,7 +148,7 @@ static msec_t counter_to_next_notification(counter_t counter) {
 	return counter->timer + NOTIFY_TIME - now;
 }
 
-/*
+/**
  * Sleep for a number of milliseconds. In the meanwhile, if it needs to send
  * a notification, that't taken care of
  */
@@ -164,28 +174,36 @@ static void counter_sleep(counter_t counter, msec_t millis) {
 	}
 
 	if(has_to_split) {
-		PTHREAD_MUTEX_LOCK(&counter->mtx);
 		counter_notify_manager(counter);
-		PTHREAD_MUTEX_UNLOCK(&counter->mtx);
-
 		counter_sleep(counter, millis - waiting);
 	}
 }
 
+/**
+ * Send a message to the manager regarding this counter queue status
+ */
 static void counter_notify_manager(counter_t counter) {
 	rw_lock_start_read(counters_status);
-
-	int conn = connect_to_manager_server();
-	int message[4] = { SO_COUNTER_QUEUE, opened_counters, counter->id,
-				counter->queue->size };
-	write(conn, message, sizeof(int) * 4);
+	PTHREAD_MUTEX_LOCK(&counter->mtx);
 	counter->timer = current_time_millis();
-	write(conn, &counter->timer, sizeof(msec_t));
-	close(conn);
 
+	if(counter->status == OPEN) {
+		int conn = connect_to_manager_server();
+		int message[4] = { SO_COUNTER_QUEUE, opened_counters, counter->id,
+					counter->queue->size };
+		write(conn, message, sizeof(int) * 4);
+		write(conn, &counter->timer, sizeof(msec_t));
+		close(conn);
+	}
+
+	PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 	rw_lock_stop_read(counters_status);
 }
 
+/**
+ * Save data and statistics about opening times and similar, change status to
+ * closed, tell every customer to change queue and finally finish
+ */
 static void counter_close(counter_t counter) {
 	// Save open time details
 	counter->opening_count++;
@@ -200,9 +218,15 @@ static void counter_close(counter_t counter) {
 	// "Telling" every customer in queue to go to another counter
 	customer_t customer;
 	while((customer = queue_dequeue(counter->queue)) != NULL) {
+		// Avoiding deadlock
+		PTHREAD_MUTEX_UNLOCK(&counter->mtx);
 		PTHREAD_MUTEX_LOCK(&customer->mtx);
-		customer->current_queue = -1;
+		// Avoid race condition (technically not possible, but better safe
+		// than sorry)
+		if(customer->current_queue == counter->id)
+			customer->current_queue = -1;
 		PTHREAD_MUTEX_UNLOCK(&customer->mtx);
+		PTHREAD_MUTEX_LOCK(&counter->mtx);
 	}
 
 	SUPERMARKET_LOG("Counter %d has been closed\n", counter->id);

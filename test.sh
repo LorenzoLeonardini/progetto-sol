@@ -22,6 +22,7 @@ while true; do
 		file=$(date +%d-%m-%Y-%H.%M.%s.txt)
 		telegram-notify "Error in project test with signal $signal. Saved as $file" 2
 		mv tmp/log.txt "tmp/$file"
+		./kill.sh
 	else
 		let "counter += 1"
 		if [[ $counter = 50 ]]; then
