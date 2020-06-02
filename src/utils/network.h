@@ -9,10 +9,7 @@
 #define SO_CUSTOMER_GRANT_EXIT 6
 
 #define MANAGER_SOCKET_READ(sock, point, size, perror_msg, error, ret) { \
-	int n_bytes; \
-	do { \
-		n_bytes = read(sock, point, size); \
-	} while(n_bytes == -1 && errno == EINTR); \
+	int n_bytes = read(sock, point, size); \
 	if(n_bytes == -1) { \
 		perror(perror_msg); \
 		MANAGER_ERROR(error "\n"); \

@@ -4,5 +4,6 @@
 void *guard_create(void *attr);
 void guard_customer_exiting(unsigned int id);
 void guard_close();
+void guard_close_entrance();
 
 #endif

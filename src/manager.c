@@ -241,9 +241,8 @@ static void *queue_status(void *args) {
 	if(to_request < 1) to_request = 1;
 	else if(to_request > K) to_request = K;
 
-	if(to_request != counter_number) {
-		// Make this message invalid for future decisions
-		queues[counter].timestamp = 0;
+	if(to_request != counter_number 
+			&& queues[counter_number - 1].timestamp > timestamp - NOTIFY_TIME - 100) {
 		// Sending request
 		if(supermarket_connection != -1) {
 			int message[2] = { SO_DESIRED_COUNTERS, to_request };

@@ -1,0 +1,19 @@
+# questo e' un commento
+# diversi "blocchi" vengono definiti da `-- [NOMEBLOCCO]`
+-- GENERALE
+SIGNAL: SIGKILL
+NUMERO CLIENTI: 42
+PRODOTTI VENDUTI: 42
+-- CLIENTI
+# nessuna indentazione indica l'id dell'oggetto
+# l'indentazione indica proprieta'
+0:
+	TEMPO NEL SUPERMERCATO: 1802
+-- CASSE
+0:
+# possono anche esserci liste
+	TEMPO CLIENTI:
+		87
+		76
+-- CLIENTI
+# i blocchi possono interrompersi e continuare dopo

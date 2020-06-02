@@ -12,7 +12,7 @@ while true; do
 	let "time %= 15"
 	let "time += 5"
 	valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes --log-file="tmp/log.txt" ./supermercato.out config1.txt & \
-	pid=$(pgrep memcheck | head -1); \
+	pid=$!; \
 	sleep $time; \
 	kill -$signal $pid; \
 	wait $pid

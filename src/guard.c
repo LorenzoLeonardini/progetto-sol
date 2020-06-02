@@ -16,6 +16,7 @@ static unsigned int customer_n;
 static unsigned int current_customer_n;
 static hashmap_t customer_threads;
 static short should_close = 0;
+static short close_entrance = 0;
 static short should_gentle_close = 0;
 static pthread_mutex_t guard_mtx = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t guard_cond = PTHREAD_COND_INITIALIZER;
@@ -46,13 +47,17 @@ void *guard_create(void *attr) {
 	current_customer_n = 0;
 	customer_threads = hashmap_create(C);
 	// Guard loop
-	while(!should_close) {
+	while(!should_close && !close_entrance) {
 		while(current_customer_n < C) {
 			create_customer();
 		}
-		while(C - current_customer_n < E && !should_close) {
+		while(C - current_customer_n < E && !should_close && !close_entrance) {
 			PTHREAD_COND_WAIT(&guard_cond, &guard_mtx);
 		}
+	}
+
+	while(!should_close) {
+		PTHREAD_COND_WAIT(&guard_cond, &guard_mtx);
 	}
 
 	// Send every customer a signal to interrupt every sleep and exit the
@@ -93,6 +98,13 @@ void guard_close(int gentle_close) {
 	PTHREAD_MUTEX_LOCK(&guard_mtx);
 	should_close = 1;
 	should_gentle_close = gentle_close;
+	PTHREAD_COND_SIGNAL(&guard_cond);
+	PTHREAD_MUTEX_UNLOCK(&guard_mtx);
+}
+
+void guard_close_entrance() {
+	PTHREAD_MUTEX_LOCK(&guard_mtx);
+	close_entrance = 1;
 	PTHREAD_COND_SIGNAL(&guard_cond);
 	PTHREAD_MUTEX_UNLOCK(&guard_mtx);
 }

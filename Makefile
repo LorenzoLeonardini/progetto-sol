@@ -81,14 +81,14 @@ lldstest.out: llds src/llds/test/test.c
 
 test1: all
 	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes ./supermercato.out config1.txt & \
-	pid=$$(pgrep memcheck | head -1); \
+	pid=$$!; \
 	sleep 15; \
 	kill -3 $$pid; \
 	wait $$pid
 
 test2: all
 	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes ./supermercato.out config2.txt & \
-	pid=$$(pgrep memcheck | head -1); \
+	pid=$$!; \
 	sleep 25; \
 	kill -1 $$pid; \
 	wait $$pid; \

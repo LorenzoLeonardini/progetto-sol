@@ -69,6 +69,7 @@ void supermarket_launch() {
 		rw_lock_start_write(counters_status);
 		supermarket_opened = FALSE;
 		rw_lock_stop_write(counters_status);
+		guard_close_entrance();
 		while(opened_counters > 0)
 			close_counter();
 		guard_close(FALSE);
@@ -125,7 +126,8 @@ static void open_counter() {
 static void supermarket_loop(int connection) {
 	int n_bytes;
 	int message[2];
-	while((n_bytes = read(connection, &message, sizeof(int) * 2)) > 0) {
+	while(!sighup && !sigquit && 
+			(n_bytes = read(connection, &message, sizeof(int) * 2)) > 0) {
 		if(message[0] != SO_DESIRED_COUNTERS) {
 			// Not necessarily a problem, it could just be the signal
 			SUPERMARKET_ERROR("Expected SO_DESIRED_COUNTERS, not received.\n");
