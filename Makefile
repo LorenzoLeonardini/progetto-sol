@@ -33,7 +33,7 @@ LLDS_HEADERS = src/llds/errors.h src/llds/hashmap.h src/llds/queue.h src/llds/re
 
 .PHONY: all clean
 
-all: llds supermercato
+all: libllds.a supermercato.out
 
 # Delete intermediate files and others
 clean:
@@ -51,9 +51,9 @@ clean:
 	@rm -rf test.log exec?.log
 
 # supermercato target
-supermercato: $(OBJS) llds
+supermercato.out: $(OBJS) libllds.a
 	@$(ECHO) "$(GREEN)Generating executable $@.out$(NC)"
-	@$(CC) $(CFLAGS) $(OBJS) -o $@.out -g -L . -lllds
+	@$(CC) $(CFLAGS) $(OBJS) -o $@ -g -L . -lllds
 	@$(ECHO) "$(GREEN)\033[1mTarget $@ built$(NC)"
 
 # Object files for each source needed
@@ -62,10 +62,10 @@ $(ODIR)/%.o: src/%.c $(HEADERS) $(LLDS_HEADERS)
 	@$(CC) $(CFLAGS) -c -o $@ $<
 	@$(ECHO) "$(GREEN)Generating object file $@$(NC)"
 
-llds: $(LLDS_OBJS)
-	@$(ECHO) "$(GREEN)Generating library lib$@$(NC)"
-	@ar r libllds.a $(LLDS_OBJS)
-	@$(ECHO) "$(GREEN)\033[1mTarget lib$@ built$(NC)"
+libllds.a: $(LLDS_OBJS)
+	@$(ECHO) "$(GREEN)Generating library $@$(NC)"
+	@ar r $@ $(LLDS_OBJS)
+	@$(ECHO) "$(GREEN)\033[1mTarget $@ built$(NC)"
 
 $(ODIR)/llds/%.o: src/llds/%.c $(LLDS_HEADERS)
 	@[ -d $(ODIR)/llds ] || mkdir -p $(ODIR)/llds

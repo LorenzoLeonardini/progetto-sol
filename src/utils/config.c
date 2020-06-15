@@ -47,18 +47,9 @@ static void read_config_file(char *file) {
 	// Read line by line
 	int len;
 	while((len = getline(&line, &size, file_fd)) > 0) {
-		// This should be called if line was too large for buffer and couldn't
-		// fit completely.
-		if(len >= 99) {
-			free(line);
-			fclose(file_fd);
-			fprintf(stderr, "config file has too long line\n");
-			exit(EXIT_FAILURE);
-		}
-
 		int index = -1;
 		// Search ':' inside line and save its index
-		for(int i = 0; i < 100 && index == -1; i++) {
+		for(int i = 0; i < len && index == -1; i++) {
 			if(line[i] == ':')
 				index = i;
 			if(line[i] == '\0') break;
