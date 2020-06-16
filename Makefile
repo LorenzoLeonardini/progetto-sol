@@ -80,18 +80,18 @@ lldstest.out: llds src/llds/test/test.c
 .PHONY: test1 test2 lldstest
 
 test1: all
-	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes ./supermercato.out config1.txt & \
+	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes --error-exitcode=1 --exit-on-first-error=yes ./supermercato.out config1.txt & \
 	pid=$$!; \
 	sleep 15; \
 	kill -3 $$pid; \
 	wait $$pid
 
 test2: all
-	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes ./supermercato.out config2.txt & \
+	@valgrind --leak-check=full --trace-children=yes --show-leak-kinds=all --track-origins=yes --error-exitcode=1 --exit-on-first-error=yes ./supermercato.out config2.txt & \
 	pid=$$!; \
 	sleep 25; \
 	kill -1 $$pid; \
-	wait $$pid; \
+	wait $$pid && \
 	./analisi.sh exec2.log
 
 lldstest: lldstest.out

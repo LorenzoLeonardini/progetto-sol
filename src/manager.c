@@ -125,10 +125,12 @@ static void close_connections() {
 }
 
 static void wait_supermarket_close(int supermarket_pid) {
-	if(waitpid(supermarket_pid, NULL, 0) == -1) {
+	int status;
+	if(waitpid(supermarket_pid, &status, 0) == -1) {
 		perror("[Manager] Waiting supermarket process to finish");
 		exit(EXIT_FAILURE);
 	}
+	if(status != 0) exit(EXIT_FAILURE);
 }
 
 static void handle_connection(int connection) {
