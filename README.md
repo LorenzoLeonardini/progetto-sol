@@ -1,4 +1,4 @@
-# Progetto SOL
+# Progetto SOL ![C/C++ CI](https://github.com/LorenzoLeonardini/progetto-sol/workflows/C/C++%20CI/badge.svg) 
 
 Progetto Esame Sistemi Operativi e Laboratorio - UniPi - A.A.19/20
 
