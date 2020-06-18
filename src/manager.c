@@ -130,6 +130,8 @@ static void wait_supermarket_close(int supermarket_pid) {
 		perror("[Manager] Waiting supermarket process to finish");
 		exit(EXIT_FAILURE);
 	}
+	// The reason why the exit code is retrieved and checked
+	// is for automated tests purposes
 	if(status != 0) exit(EXIT_FAILURE);
 }
 
