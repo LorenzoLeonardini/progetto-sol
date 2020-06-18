@@ -88,7 +88,7 @@ print_customer() {
 # print formatted counter data into temporary file
 print_counter() {
 	if [[ ! ${counter['id']} == -1 ]]; then
-		if [[ ! ${counter['n_close']} == "0" ]]; then
+		if [[ ! ${counter['n_customer']} == "0" ]]; then
 			counter['t_avg']=$((${counter['t_cust']} / ${counter['n_customer']}))
 		else
 			counter['t_avg']=${counter['t_cust']}
