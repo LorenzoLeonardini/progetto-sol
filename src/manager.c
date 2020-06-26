@@ -132,7 +132,10 @@ static void wait_supermarket_close(int supermarket_pid) {
 	}
 	// The reason why the exit code is retrieved and checked
 	// is for automated tests purposes
-	if(status != 0) exit(EXIT_FAILURE);
+	if(WIFEXITED(status)) {
+		status = WEXITSTATUS(status);
+		if(status != 0) exit(EXIT_FAILURE);
+	}
 }
 
 static void handle_connection(int connection) {
